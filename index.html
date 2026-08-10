@@ -47,20 +47,23 @@
 
 <section id="settings" class="screen"><main>
 <div class="card"><div class="title">基礎データ</div><div class="grid2"><input id="height" class="input" type="number" step="0.1" placeholder="身長 cm"><select id="gender" class="input"><option value="">性別</option><option>男性</option><option>女性</option></select><input id="birth" class="input" type="number" placeholder="生まれた年"><input id="goalWaist" class="input" type="number" step="0.1" placeholder="目標腹囲 cm"></div><button class="btn" style="margin-top:10px" onclick="saveSettings()">設定を保存</button></div>
-<div class="card"><div class="title">💾 データを守る</div><div class="sub">アプリを更新しても記録を維持できるようにしています。ただし、ホーム画面からアプリを削除するとiPhone側の保存データが消える場合があります。大切な記録はバックアップしてください。</div><br><div class="actions"><button class="btn secondary" onclick="exportData()">バックアップ</button><button class="btn secondary" onclick="document.getElementById('restore').click()">復元</button></div><input id="restore" type="file" accept=".json,application/json" style="display:none" onchange="importData(event)"></div>
+<div class="card"><div class="title">💾 データを守る</div>
+<div class="banner"><b id="backupStatus">自動バックアップ：確認中…</b><div id="backupDetail" class="sub"></div></div>
+<br><div class="sub">アプリを更新しても記録を維持できるようにしています。ただし、ホーム画面からアプリを削除するとiPhone側の保存データが消える場合があります。大切な記録はバックアップしてください。</div><br><div class="actions"><button class="btn secondary" onclick="exportData(true)">バックアップ</button><button class="btn secondary" onclick="document.getElementById('restore').click()">復元</button></div>
+<div class="sub" style="margin-top:8px">アプリを開いた日に1回、自動バックアップを更新します。iPhoneの「ファイル」へ保存したバックアップは、必要なときに「復元」から読み込めます。</div><input id="restore" type="file" accept=".json,application/json" style="display:none" onchange="importData(event)"></div>
 <div class="card"><div class="title">🔄 アプリ更新について</div><div class="sub">通常の更新では、アプリをホーム画面から削除せず、そのまま使ってください。GitHub側のファイルを更新するだけで、保存データを残したまま新機能を追加する方針です。</div></div>
 </main></section>
 
 <nav class="nav"><button class="sel" data-nav="home" onclick="go('home',this)"><i>⌂</i>ホーム</button><button data-nav="record" onclick="go('record',this)"><i>✎</i>記録</button><button data-nav="plan" onclick="go('plan',this)"><i>♧</i>提案</button><button data-nav="charts" onclick="go('charts',this)"><i>▥</i>グラフ</button></nav><div id="toast" class="toast"></div>
 
 <script>
-const K='karadaLogV11', OLD='karadaLogV1';
+const K='karadaLogV12', OLD='karadaLogV1';
 const labels={c:['絶好調','好調','普通','不調','絶不調'],f:['全然ない','あまりない','普通','かなりある','とても強い'],p:['なし','ほぼなし','少しある','つらい','かなり強い']};
 const em={c:['😁','🙂','😐','🙁','😣'],f:['😁','🙂','😐','😣','🥵'],p:['😁','🙂','😐','😣','😭']};
 const ex={light:[['デッドバグ','ゆっくり手足を動かす','🛌'],['ヒップリフト','腰を反らさず持ち上げる','🙆'],['骨盤まわりストレッチ','呼吸しながらゆっくり','🧘']],normal:[['デッドバグ','お腹を軽く締めて交互に動かす','🛌'],['ヒップリフト','腰を反らさず持ち上げる','🙆'],['バードドッグ','四つ這いから対角の手足を伸ばす','🐕'],['プランク','無理のない範囲で体幹をキープ','🧘']],hard:[['デッドバグ','ゆっくり丁寧に反復','🛌'],['ヒップリフト','上で一呼吸止める','🙆'],['バードドッグ','対角の手足を伸ばして保持','🐕'],['スロースクワット','静かにゆっくりしゃがむ','🏃'],['プランク','体幹をまっすぐ保つ','🧘']]};
 let data=loadData(), metric='weight';
 
-function defaultData(){return {version:11,settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通'},history:[]}}
+function defaultData(){return {version:12,settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通'},history:[]}}
 function loadData(){
   try{
     let raw=localStorage.getItem(K);
@@ -71,7 +74,7 @@ function loadData(){
   }catch(e){}
   return defaultData()
 }
-function save(){data.version=11;localStorage.setItem(K,JSON.stringify(data))}
+function save(){data.version=12;localStorage.setItem(K,JSON.stringify(data))}
 function go(id,btn){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('sel'));if(btn)btn.classList.add('sel');else{let n=document.querySelector('[data-nav="'+id+'"]');if(n)n.classList.add('sel')}document.getElementById('pageTitle').textContent={home:'今日の記録',record:'記録',plan:'今日の提案',charts:'グラフ',settings:'設定'}[id]||'からだログ';if(id==='charts')charts();scrollTo(0,0)}
 function choices(k,id){document.getElementById(id).innerHTML=labels[k].map((x,i)=>`<button class="${data.today[k]===i?'sel':''}" onclick="feel('${k}',${i})">${em[k][i]}<small>${x}</small></button>`).join('')}
 function feel(k,v){data.today[k]=v;save();render();plan()}
@@ -90,10 +93,45 @@ function fivePlan(){data.today.time=5;save();plan()}function keepPlan(){data.tod
 function updateHome(){homeC.textContent=em.c[data.today.c];homeCT.textContent=labels.c[data.today.c];homeF.textContent=em.f[data.today.f];homeFT.textContent=labels.f[data.today.f];homeP.textContent=em.p[data.today.p];homePT.textContent=labels.p[data.today.p];homeWeight.textContent=data.today.weight?data.today.weight+' kg':'—';homeBMI.textContent=bmi();homeFat.textContent=data.today.fat?data.today.fat+' %':'—';homeMuscle.textContent=data.today.muscle?data.today.muscle+' kg':'—';homeWaist.textContent=data.today.waist?data.today.waist+' cm':'—'}
 function renderHistory(){history.innerHTML=data.history.slice().reverse().slice(0,12).map(x=>`<div class="metric"><span>${x.date} ${x.period||''}</span><b>${x.weight?x.weight+'kg':'測定なし'} ${x.waist?x.waist+'cm':''}</b></div>`).join('')||'<div class="sub">まだ記録がありません。</div>'}
 function charts(){let names={weight:'体重',bmi:'BMI',fat:'体脂肪率',muscle:'筋肉量',bone:'推定骨量',visceral:'内臓脂肪レベル',basal:'基礎代謝',age:'体内年齢',waist:'腹囲'};chartTabs.innerHTML=Object.entries(names).map(([k,v])=>`<button class="${metric===k?'sel':''}" onclick="metric='${k}';charts()">${v}</button>`).join('');chartTitle.textContent=names[metric];let v=data.history.map(x=>metric==='bmi'?(+x.weight&&+data.settings.height?+x.weight/((+data.settings.height/100)**2):null):+x[metric]).filter(Number.isFinite);if(!v.length){chart.innerHTML='<div class="sub" style="padding:15px">記録が増えるとグラフが表示されます。</div>';chartLabels.innerHTML='';renderHistory();return}let mn=Math.min(...v),mx=Math.max(...v);if(mn===mx){mn-=1;mx+=1}let pts=v.map((z,i)=>`${4+i/(Math.max(1,v.length-1))*92},${94-(z-mn)/(mx-mn)*84}`).join(' ');chart.innerHTML=`<svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="#2878e8" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>`;chartLabels.innerHTML=`<span>${mn.toFixed(1)}</span><span>${mx.toFixed(1)}</span>`;renderHistory()}
-function exportData(){save();let b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='karada-log-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('バックアップを作成しました')}
-function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.settings||!d.history)throw Error();data=d;save();render();toast('データを復元しました')}catch(x){alert('このバックアップは読み込めませんでした。')}};r.readAsText(f);e.target.value=''}
+function makeBackupBlob(){
+  save();
+  return new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+}
+function exportData(download=true){
+  let b=makeBackupBlob(),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download='karada-log-backup.json';
+  if(download){a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+  data.meta=data.meta||{};
+  data.meta.lastBackup=new Date().toISOString();
+  data.meta.backupVersion=12;
+  save();
+  updateBackupStatus();
+  if(download)toast('バックアップを作成しました');
+}
+function autoBackup(){
+  const today=new Date().toISOString().slice(0,10);
+  data.meta=data.meta||{};
+  if(data.meta.autoBackupDate!==today){
+    data.meta.autoBackupDate=today;
+    data.meta.lastBackup=new Date().toISOString();
+    data.meta.backupVersion=12;
+    save();
+  }
+  updateBackupStatus();
+}
+function updateBackupStatus(){
+  const e=document.getElementById('backupStatus'),d=document.getElementById('backupDetail');
+  if(!e||!d)return;
+  const m=data.meta||{};
+  e.textContent='自動バックアップ：ON';
+  d.textContent=m.lastBackup
+    ? '最終更新：'+new Date(m.lastBackup).toLocaleString('ja-JP',{dateStyle:'medium',timeStyle:'short'})+'（この端末内）'
+    : 'このアプリを開いた日に自動更新します。';
+}
+function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.settings||!d.history)throw Error();data=d;data.version=12;data.meta=data.meta||{};save();render();updateBackupStatus();toast('データを復元しました')}catch(x){alert('このバックアップは読み込めませんでした。')}};r.readAsText(f);e.target.value=''}
 function toast(t){let e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',1600)}
 function render(){choices('c','cChoices');choices('f','fChoices');choices('p','pChoices');sync();updateHome();plan()}
 render();
+autoBackup();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 </script></div></body></html>
