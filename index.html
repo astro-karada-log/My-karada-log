@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="からだログ">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>からだログ</title>
+<style>
+:root{--blue:#2878e8;--text:#20242a;--muted:#7c838c;--bg:#f6f7f9;--line:#e5e8ed}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;color:var(--text)}
+.app{max-width:520px;margin:auto;min-height:100vh;padding-bottom:78px}.top{height:62px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:5}.top h1{font-size:20px;margin:0}.top button{border:0;background:none;font-size:22px}
+main{padding:14px}.screen{display:none}.screen.active{display:block}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);padding:0;overflow:hidden;text-align:center}.summary>div{padding:12px 4px;border-right:1px solid var(--line)}.summary>div:last-child{border:0}.big{font-size:30px}.small{font-size:11px;color:var(--muted)}
+.metric{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eef0f3}.metric:last-child{border:0}.metric span{color:var(--muted);font-size:13px}.metric b{font-size:16px}
+.section-title{font-weight:700;margin:3px 2px 10px}.note{font-size:12px;color:var(--muted);line-height:1.6}
+.btn{width:100%;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:700;background:var(--blue);color:#fff}.btn.green{background:#34b96f}
+.nav{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:auto;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:7px 4px calc(7px + env(safe-area-inset-bottom));z-index:10}.nav button{border:0;background:none;color:#858b93;font-size:11px}.nav button.active{color:var(--blue);font-weight:700}.nav i{display:block;font-style:normal;font-size:20px}
+.emoji-scale{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.emoji-scale button{border:1px solid transparent;background:#f5f7f9;border-radius:13px;padding:7px 2px;min-height:72px;font-size:29px}.emoji-scale button small{display:block;font-size:9px;color:var(--muted);margin-top:3px}.emoji-scale button.selected{border-color:var(--blue);background:#edf4ff}
+.choice-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.choice-row button{border:1px solid #dfe4ea;background:#fff;border-radius:11px;padding:10px 5px;font-weight:600}.choice-row button.sel{border-color:var(--blue);background:#edf4ff;color:var(--blue)}
+.exercise{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}.illus{width:62px;height:55px;border-radius:12px;background:#eef6ff;display:flex;align-items:center;justify-content:center;font-size:32px}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><h1 id="title">今日の記録</h1><button onclick="show('settings')">⚙️</button></div>
+
+<section id="home" class="screen active"><main>
+<div class="card summary">
+<div><div class="small">体調</div><div class="big" id="hc">🙂</div><div class="small" id="hct">好調</div></div>
+<div><div class="small">疲れ</div><div class="big" id="hf">🙂</div><div class="small" id="hft">あまりない</div></div>
+<div><div class="small">痛み</div><div class="big" id="hp">😁</div><div class="small" id="hpt">なし</div></div>
+</div>
+<div class="card"><div class="section-title">測定データ</div>
+<div class="metric"><span>体重</span><b id="hw">67.2 kg</b></div><div class="metric"><span>BMI</span><b id="hb">22.1</b></div>
+<div class="metric"><span>体脂肪率</span><b>18.6 %</b></div><div class="metric"><span>筋肉量</span><b>51.3 kg</b></div>
+<div class="metric"><span>推定骨量</span><b>2.8 kg</b></div><div class="metric"><span>内臓脂肪レベル</span><b>6</b></div>
+<div class="metric"><span>基礎代謝</span><b>1,530 kcal</b></div><div class="metric"><span>体内年齢</span><b>33 才</b></div>
+<div class="metric"><span>腹囲</span><b id="hwa">82.5 cm</b></div></div>
+<div class="card"><div class="section-title">今日のエクササイズ</div><p class="note">体調・疲れ・痛み・テニス量に合わせて自動調整。</p><button class="btn" onclick="show('record')">今日の状態を記録する</button></div>
+</main></section>
+
+<section id="record" class="screen"><main>
+<div class="card"><div class="section-title">体調</div><div class="emoji-scale" id="condition">
+<button onclick="feel('c',0,this)">😁<small>絶好調</small></button><button onclick="feel('c',1,this)">🙂<small>好調</small></button><button onclick="feel('c',2,this)">😐<small>普通</small></button><button onclick="feel('c',3,this)">🙁<small>不調</small></button><button onclick="feel('c',4,this)">😣<small>絶不調</small></button></div>
+<div class="section-title" style="margin-top:15px">疲れ</div><div class="emoji-scale" id="fatigue">
+<button onclick="feel('f',0,this)">😁<small>全然ない</small></button><button onclick="feel('f',1,this)">🙂<small>あまりない</small></button><button onclick="feel('f',2,this)">😐<small>普通</small></button><button onclick="feel('f',3,this)">😣<small>かなりある</small></button><button onclick="feel('f',4,this)">🥵<small>とても強い</small></button></div>
+<div class="section-title" style="margin-top:15px">痛み</div><div class="emoji-scale" id="pain">
+<button onclick="feel('p',0,this)">😁<small>なし</small></button><button onclick="feel('p',1,this)">🙂<small>ほぼなし</small></button><button onclick="feel('p',2,this)">😐<small>少しある</small></button><button onclick="feel('p',3,this)">😣<small>つらい</small></button><button onclick="feel('p',4,this)">😭<small>かなり強い</small></button></div></div>
+
+<div class="card"><div class="section-title">今日の運動</div><div class="choice-row"><button id="m5" onclick="ptime(5)">5分</button><button id="m10" class="sel" onclick="ptime(10)">10分</button><button id="m15" onclick="ptime(15)">15分</button></div><div class="formrow" style="margin-top:10px"><label>今日のテニス時間（分）</label><input id="tennis" type="number" min="0" step="5" value="0"></div><button class="btn green" onclick="save()">保存して提案を見る</button></div>
+</main></section>
+
+<section id="plan" class="screen"><main>
+<div class="card"><div class="section-title">今日のおすすめ</div><div id="message"></div><div id="exercises"></div></div>
+</main></section>
+
+<section id="settings" class="screen"><main><div class="card"><div class="section-title">基本設定</div><p class="note">身長・性別・生まれた年・目標腹囲などは、このiPhone内に保存します。</p><input id="height" type="number" value="174" placeholder="身長 cm"><br><br><input id="year" type="number" value="1990" placeholder="生まれた年"></div></main></section>
+
+<nav class="nav"><button class="active" onclick="show('home',this)"><i>⌂</i>ホーム</button><button onclick="show('record',this)"><i>✎</i>記録</button><button onclick="show('plan',this)"><i>♧</i>提案</button><button onclick="show('settings',this)"><i>⚙</i>設定</button></nav>
+</div>
+<script>
+const names={c:['絶好調','好調','普通','不調','絶不調'],f:['全然ない','あまりない','普通','かなりある','とても強い'],p:['なし','ほぼなし','少しある','つらい','かなり強い']};
+const em={c:['😁','🙂','😐','🙁','😣'],f:['😁','🙂','😐','😣','🥵'],p:['😁','🙂','😐','😣','😭']};
+let s=JSON.parse(localStorage.getItem('karadaLog')||'{"c":1,"f":1,"p":0,"minutes":10}');
+function show(id,btn){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');if(btn){document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}document.getElementById('title').textContent={home:'今日の記録',record:'記録',plan:'今日の提案',settings:'設定'}[id];scrollTo(0,0)}
+function feel(k,v,b){s[k]=v;b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');update()}
+function update(){hc.textContent=em.c[s.c];hct.textContent=names.c[s.c];hf.textContent=em.f[s.f];hft.textContent=names.f[s.f];hp.textContent=em.p[s.p];hpt.textContent=names.p[s.p];['c','f','p'].forEach(k=>{let id={c:'condition',f:'fatigue',p:'pain'}[k];document.querySelectorAll('#'+id+' button').forEach((b,i)=>b.classList.toggle('selected',i===s[k]))})}
+function ptime(v){s.minutes=v;['5','10','15'].forEach(x=>document.getElementById('m'+x).classList.toggle('sel',+x===v))}
+function save(){localStorage.setItem('karadaLog',JSON.stringify(s));makePlan();show('plan');}
+function makePlan(){
+ const tennis=+(document.getElementById('tennis').value||0); let intensity='普通', time=s.minutes;
+ if(s.p>=3||s.c>=3||s.f>=3) intensity='軽め';
+ if(s.c===0&&s.f<=1&&s.p<=1) intensity='しっかり';
+ if(tennis>=15){message.innerHTML='<b>🎾 テニスを'+tennis+'分しました</b><p class="note">今日は十分運動できています。追加運動は無理しなくてOK。</p><div class="choice-row"><button onclick="rest()">今日は休む</button><button onclick="mini()">5分だけ</button><button onclick="keep()">予定どおり</button></div>';return}
+ message.innerHTML='<b>'+intensity+'・'+time+'分</b><p class="note">自宅でできる、足音を立てにくいウエスト引き締めメニューです。</p>';
+ let a=intensity==='軽め'?['デッドバグ','ヒップリフト','ストレッチ']:intensity==='しっかり'?['デッドバグ','ヒップリフト','バードドッグ','スロースクワット','プランク']:['デッドバグ','ヒップリフト','バードドッグ','プランク'];
+ let n=time===5?2:time===10?3:a.length; exercises.innerHTML=a.slice(0,n).map((x,i)=>'<div class="exercise"><div class="illus">'+['🛌','🙆','🐕','🧘','🧘‍♀️'][i]+'</div><div><b>'+x+'</b><small>フォーム優先・静かに</small></div><span>'+(time===15?'2〜3':'1〜2')+'分</span></div>').join('');
+}
+function rest(){message.innerHTML='<b>🌙 今日は休養</b><p class="note">テニスで十分動けています。ゆっくり休みましょう。</p>';exercises.innerHTML=''}
+function mini(){s.minutes=5;makePlan()}
+function keep(){document.getElementById('tennis').value=0;makePlan()}
+update();makePlan();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body></html>
