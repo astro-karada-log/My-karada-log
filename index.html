@@ -36,6 +36,10 @@
 .chart-compare .checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .chart-compare label{font-size:12px;background:#f5f7fa;border-radius:10px;padding:6px 8px}
 
+.record-date-row{display:grid;grid-template-columns:minmax(150px,1fr) 1.7fr;gap:10px;align-items:end;margin-top:10px;padding:10px 12px;border-radius:12px;background:#f6f8fa}
+.record-date-row label{font-size:12px;font-weight:700}.record-date-row input{display:block;width:100%;margin-top:5px}
+.record-date-note{font-size:11px;line-height:1.5;margin:0 0 3px}
+@media(max-width:380px){.record-date-row{grid-template-columns:1fr}}
 .history-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .history-tools label{font-size:12px;font-weight:700}
 .history-tools select{display:block;width:100%;margin-top:5px;padding:9px;border:1px solid #dfe5eb;border-radius:10px;background:#fff}
@@ -60,8 +64,8 @@
 
 <section id="record" class="screen"><main>
 <div class="card"><div class="title">今日の状態</div><div class="title">体調</div><div id="cChoices" class="choices"></div><div class="title" style="margin-top:15px">疲れ</div><div id="fChoices" class="choices"></div><div class="title" style="margin-top:15px">痛み</div><div id="pChoices" class="choices"></div></div>
-<div class="card"><div class="title">測定</div><div class="three"><button id="morning" onclick="setPeriod('朝')">🌅 朝</button><button id="night" onclick="setPeriod('夜')">🌙 夜</button><button onclick="clearMeasure()">測定なし</button></div><div class="grid2" style="margin-top:10px"><input id="weight" class="input" type="number" step="0.1" placeholder="体重 kg"><input id="fat" class="input" type="number" step="0.1" placeholder="体脂肪率 %"><input id="muscle" class="input" type="number" step="0.1" placeholder="筋肉量 kg"><input id="bone" class="input" type="number" step="0.1" placeholder="推定骨量 kg"><input id="visceral" class="input" type="number" step="1" placeholder="内臓脂肪レベル"><input id="basal" class="input" type="number" step="1" placeholder="基礎代謝 kcal"><input id="age" class="input" type="number" step="1" placeholder="体内年齢"><input id="waist" class="input" type="number" step="0.1" placeholder="腹囲 cm"></div><div class="sub" style="margin-top:8px">BMIは設定した身長から自動計算します。</div></div>
-<div class="card"><div class="title">今日の運動</div><div class="title">時間</div><div id="timeChoices" class="three"><button onclick="setTime(5)">5分</button><button class="sel" onclick="setTime(10)">10分</button><button onclick="setTime(15)">15分</button></div><div class="grid2" style="margin-top:10px"><input id="tennis" class="input" type="number" min="0" step="5" placeholder="テニス 分"><select id="intensity" class="input"><option>軽め</option><option selected>普通</option><option>しっかり</option></select></div></div>
+<div class="card"><div class="title">測定</div><div class="three"><button id="morning" onclick="setPeriod('朝')">🌅 朝</button><button id="night" onclick="setPeriod('夜')">🌙 夜</button><button onclick="clearMeasure()">測定なし</button></div><div class="record-date-row"><label>記録日<input id="recordDate" class="input" type="date" onchange="setRecordDate(this.value)"></label><div class="sub record-date-note">夜は0:00〜5:59は前日の夜として自動表示。日付は自由に変更できます。</div></div><div class="grid2" style="margin-top:10px"><input id="weight" class="input" type="number" step="0.1" placeholder="体重 kg"><input id="fat" class="input" type="number" step="0.1" placeholder="体脂肪率 %"><input id="muscle" class="input" type="number" step="0.1" placeholder="筋肉量 kg"><input id="bone" class="input" type="number" step="0.1" placeholder="推定骨量 kg"><input id="visceral" class="input" type="number" step="1" placeholder="内臓脂肪レベル"><input id="basal" class="input" type="number" step="1" placeholder="基礎代謝 kcal"><input id="age" class="input" type="number" step="1" placeholder="体内年齢"><input id="waist" class="input" type="number" step="0.1" placeholder="腹囲 cm"></div><div class="sub" style="margin-top:8px">BMIは設定した身長から自動計算します。</div></div>
+<div class="card"><div class="title">今日の運動</div><div class="title">提案メニューの時間</div><div id="timeChoices" class="three"><button onclick="setTime(5)">5分</button><button class="sel" onclick="setTime(10)">10分</button><button onclick="setTime(15)">15分</button></div><div class="sub" style="margin-top:10px">🎾 他の運動実施時間（テニスなど）</div><div class="grid2" style="margin-top:6px"><input id="tennis" class="input" type="number" min="0" step="5" placeholder="実施した時間（分）"><select id="intensity" class="input"><option>軽め</option><option selected>普通</option><option>しっかり</option></select></div></div>
 <button class="btn green" onclick="saveRecord()">保存して今日の提案を見る</button></main>
 </section>
 
@@ -183,7 +187,7 @@ hard:[
 ]};
 let data=loadData(), metric='weight';
 
-function defaultData(){return {version:13.1,settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通'},history:[]}}
+function defaultData(){return {version:17.0,settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',recordDate:'',recordDateAuto:true,weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通'},history:[]}}
 function loadData(){
   try{
     let raw=localStorage.getItem(K);
@@ -194,19 +198,67 @@ function loadData(){
   }catch(e){}
   return defaultData()
 }
-function save(){data.version=13.1;localStorage.setItem(K,JSON.stringify(data))}
+function save(){data.version=17.0;localStorage.setItem(K,JSON.stringify(data))}
 function _goV14(id,btn){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('sel'));if(btn)btn.classList.add('sel');else{let n=document.querySelector('[data-nav="'+id+'"]');if(n)n.classList.add('sel')}document.getElementById('pageTitle').textContent={home:'今日の記録',record:'記録',plan:'今日の提案',charts:'グラフ',settings:'設定'}[id]||'からだログ';if(id==='charts')charts();scrollTo(0,0)}
 function go(id){_goV14(id);if(id==='historyData')renderHistoryData();}
 
 function choices(k,id){document.getElementById(id).innerHTML=labels[k].map((x,i)=>`<button class="${data.today[k]===i?'sel':''}" onclick="feel('${k}',${i})">${em[k][i]}<small>${x}</small></button>`).join('')}
 function feel(k,v){data.today[k]=v;save();render();plan()}
-function setPeriod(v){data.today.period=v;document.getElementById('morning').classList.toggle('sel',v==='朝');document.getElementById('night').classList.toggle('sel',v==='夜')}
-function clearMeasure(){data.today.period='';document.getElementById('morning').classList.remove('sel');document.getElementById('night').classList.remove('sel')}
+function pad2(n){return String(n).padStart(2,'0')}
+function dateKey(d){return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())}
+function suggestedRecordDate(period){
+  const now=new Date();
+  if(period==='夜' && now.getHours()<6) now.setDate(now.getDate()-1);
+  return dateKey(now);
+}
+function ensureRecordDate(){
+  if(!data.today.recordDate) data.today.recordDate=suggestedRecordDate(data.today.period);
+  if(typeof data.today.recordDateAuto!=='boolean') data.today.recordDateAuto=true;
+}
+function setPeriod(v){
+  data.today.period=v;
+  if(data.today.recordDateAuto!==false) data.today.recordDate=suggestedRecordDate(v);
+  document.getElementById('morning').classList.toggle('sel',v==='朝');
+  document.getElementById('night').classList.toggle('sel',v==='夜');
+  document.getElementById('recordDate').value=data.today.recordDate||suggestedRecordDate(v);
+}
+function clearMeasure(){
+  data.today.period='';
+  document.getElementById('morning').classList.remove('sel');
+  document.getElementById('night').classList.remove('sel');
+}
+function setRecordDate(v){
+  data.today.recordDate=v||suggestedRecordDate(data.today.period);
+  data.today.recordDateAuto=false;
+  document.getElementById('recordDate').value=data.today.recordDate;
+  save();
+}
 function setTime(v){data.today.time=v;document.querySelectorAll('#timeChoices button').forEach((b,i)=>b.classList.toggle('sel',[5,10,15][i]===v))}
-function sync(){['weight','fat','muscle','bone','visceral','basal','age','waist','tennis'].forEach(id=>document.getElementById(id).value=data.today[id]??'');document.getElementById('intensity').value=data.today.intensity;['height','birth','goalWaist'].forEach(id=>document.getElementById(id).value=data.settings[id]||'');document.getElementById('gender').value=data.settings.gender||'';document.getElementById('morning').classList.toggle('sel',data.today.period==='朝');document.getElementById('night').classList.toggle('sel',data.today.period==='夜');setTime(+data.today.time||10)}
-function read(){['weight','fat','muscle','bone','visceral','basal','age','waist','tennis'].forEach(id=>data.today[id]=document.getElementById(id).value);data.today.intensity=document.getElementById('intensity').value}
+function sync(){
+  ensureRecordDate();
+  ['weight','fat','muscle','bone','visceral','basal','age','waist','tennis'].forEach(id=>document.getElementById(id).value=data.today[id]??'');
+  document.getElementById('intensity').value=data.today.intensity;
+  ['height','birth','goalWaist'].forEach(id=>document.getElementById(id).value=data.settings[id]||'');
+  document.getElementById('gender').value=data.settings.gender||'';
+  document.getElementById('morning').classList.toggle('sel',data.today.period==='朝');
+  document.getElementById('night').classList.toggle('sel',data.today.period==='夜');
+  document.getElementById('recordDate').value=data.today.recordDate||suggestedRecordDate(data.today.period);
+  setTime(+data.today.time||10);
+}
+function read(){
+  ['weight','fat','muscle','bone','visceral','basal','age','waist','tennis'].forEach(id=>data.today[id]=document.getElementById(id).value);
+  data.today.intensity=document.getElementById('intensity').value;
+  data.today.recordDate=document.getElementById('recordDate').value||suggestedRecordDate(data.today.period);
+}
 function bmi(){let h=+data.settings.height,w=+data.today.weight;return h&&w?(w/((h/100)**2)).toFixed(1):'—'}
-function saveRecord(){read();let x={...data.today,date:new Date().toISOString().slice(0,10)};data.history.push(x);if(data.history.length>180)data.history.shift();save();render();plan();toast('記録を保存しました');go('plan')}
+function saveRecord(){
+  read();
+  let x={...data.today,date:data.today.recordDate||suggestedRecordDate(data.today.period)};
+  delete x.recordDateAuto;
+  data.history.push(x);
+  if(data.history.length>180)data.history.shift();
+  save();render();plan();toast('記録を保存しました');go('plan')
+}
 function saveSettings(){data.settings.height=+height.value||'';data.settings.gender=gender.value;data.settings.birth=+birth.value||'';data.settings.goalWaist=+goalWaist.value||'';save();sync();updateHome();toast('設定を保存しました')}
 function level(){if(data.today.p>=3||data.today.f>=3||data.today.c>=3)return'light';if(data.today.c===0&&data.today.f<=1&&data.today.p<=1&&data.today.intensity==='しっかり')return'hard';return data.today.intensity==='軽め'?'light':data.today.intensity==='しっかり'?'hard':'normal'}
 const exerciseInfo={
@@ -364,6 +416,22 @@ function updateBackupStatus(){
 function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.settings||!d.history)throw Error();data=d;data.version=13.1;data.meta=data.meta||{};save();render();updateBackupStatus();toast('データを復元しました')}catch(x){alert('このバックアップは読み込めませんでした。')}};r.readAsText(f);e.target.value=''}
 
 let workoutState={items:[],index:0,left:0,running:false,id:null};
+let workoutWakeLock=null;
+async function requestWorkoutWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  try{
+    if(workoutWakeLock && !workoutWakeLock.released) return;
+    workoutWakeLock=await navigator.wakeLock.request('screen');
+    workoutWakeLock.addEventListener('release',()=>{workoutWakeLock=null});
+  }catch(e){}
+}
+async function releaseWorkoutWakeLock(){
+  try{if(workoutWakeLock) await workoutWakeLock.release()}catch(e){}
+  workoutWakeLock=null;
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && workoutModal.classList.contains('show')) requestWorkoutWakeLock();
+});
 function buildWorkoutPlan(){
   const course=Number(data.today.time||10);
   const type=level();
@@ -424,7 +492,7 @@ function finishWorkout(){
   if(typeof toast==="function")toast("今日のトレーニング完了！");
 }
 function resetWorkout(){clearInterval(workoutState.id);workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.left=workoutState.items[0]?.sec||0;workoutState.running=false;updateWorkoutUI()}
-function closeWorkout(){clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutModal.classList.remove("show")}
+function closeWorkout(){clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutModal.classList.remove("show");releaseWorkoutWakeLock()}
 
 function toast(t){let e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',1600)}
 function render(){choices('c','cChoices');choices('f','fChoices');choices('p','pChoices');sync();updateHome();plan()}
