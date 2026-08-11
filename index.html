@@ -40,7 +40,7 @@
 .record-date-row label{font-size:12px;font-weight:700;min-width:0}.record-date-row input{display:block;width:100%;margin-top:5px;min-width:0}
 .record-date-note{font-size:11px;line-height:1.5;margin:0 0 3px;min-width:0;overflow-wrap:anywhere}
 .unit-input{position:relative;width:100%}.unit-input .input{padding-right:38px}.unit-input .unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--m);pointer-events:none}
-@media(max-width:380px){.record-date-row{grid-template-columns:minmax(125px,0.85fr) minmax(0,1.15fr);gap:9px}.record-date-note{font-size:10px}}
+@media(max-width:480px){.record-date-row{grid-template-columns:1fr;gap:6px}.record-date-row input{max-width:100%}.record-date-note{font-size:11px;margin:0}.record-date-row label{overflow:hidden}}
 .history-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .history-tools label{font-size:12px;font-weight:700}
 .history-tools select{display:block;width:100%;margin-top:5px;padding:9px;border:1px solid #dfe5eb;border-radius:10px;background:#fff}
@@ -448,7 +448,7 @@ function startWorkoutFromPlan(){
   workoutState.index=0;workoutState.running=false;
   clearInterval(workoutState.id);
   workoutState.left=workoutState.items[0]?.sec||0;
-  updateWorkoutUI();workoutModal.classList.add("show");
+  updateWorkoutUI();workoutModal.classList.add("show");requestWorkoutWakeLock();
 }
 function formatTimer(sec){sec=Math.max(0,Math.ceil(sec));return String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0")}
 function updateWorkoutUI(){
