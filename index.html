@@ -314,11 +314,6 @@ function finishWorkout(){
 function resetWorkout(){clearInterval(workoutState.id);workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.left=workoutState.items[0]?.sec||0;workoutState.running=false;updateWorkoutUI()}
 function closeWorkout(){clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutModal.classList.remove("show")}
 
-const chartFields=[["体重","weight"],["BMI","bmi"],["体脂肪率","bodyFat"],["筋肉量","muscle"],["腹囲","waist"],["体調","condition"],["疲れ","fatigue"],["痛み","pain"],["運動時間","exercise"]];
-function setupChartCompare(){
- const box=document.getElementById("chartChecks");if(!box)return;
- box.innerHTML=chartFields.map(f=>`<label><input type="checkbox" value="${f[1]}"> ${f[0]}</label>`).join("");
-}
 function toast(t){let e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',1600)}
 function render(){choices('c','cChoices');choices('f','fChoices');choices('p','pChoices');sync();updateHome();plan()}
 render();
