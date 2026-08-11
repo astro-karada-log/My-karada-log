@@ -34,6 +34,16 @@
 .chart-compare{margin-top:12px;padding:12px;border:1px solid #e3e8ee;border-radius:14px}
 .chart-compare .checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .chart-compare label{font-size:12px;background:#f5f7fa;border-radius:10px;padding:6px 8px}
+
+.history-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.history-tools label{font-size:12px;font-weight:700}
+.history-tools select{display:block;width:100%;margin-top:5px;padding:9px;border:1px solid #dfe5eb;border-radius:10px;background:#fff}
+.history-day{margin-bottom:12px}.history-day .day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.history-day .day-title{font-weight:800}.history-day .timing{font-size:12px;opacity:.65}
+.history-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.history-item{padding:9px 10px;border-radius:12px;background:#f6f8fa}
+.history-item .label{font-size:11px;opacity:.65}.history-item .value{font-size:16px;font-weight:750;margin-top:2px}
+@media(max-width:380px){.history-grid{grid-template-columns:1fr}.history-tools{grid-template-columns:1fr}}
 </style>
 </head>
 <body><div class="app">
@@ -54,6 +64,22 @@
 <section id="plan" class="screen"><main><div class="card"><div class="title">今日のエクササイズ提案</div><div id="planMessage"></div><button id="startWorkoutBtn" class="btn" style="width:100%;margin:8px 0 12px" onclick="startWorkoutFromPlan()">▶️ この日のメニューを通しで開始</button>
 <div id="planList"></div></div><div class="card"><div class="title">メニューの考え方</div><div class="sub">ウエスト引き締めを中心に、器具なし・自宅・夜でも静かにできる内容を優先します。痛みや疲れが強い日は強度を下げます。</div></div></main></section>
 
+
+<section id="historyData" class="screen"><main>
+<div class="card">
+<div class="title">📋 過去の計測データ</div>
+<div class="sub">保存されている測定値を日付ごとに確認できます。</div>
+<div class="history-tools">
+<label>期間<select id="historyPeriod" onchange="renderHistoryData()">
+<option value="30">直近30日</option><option value="90">直近90日</option>
+<option value="365">直近1年</option><option value="all" selected>すべて</option>
+</select></label>
+<label>時間帯<select id="historyTiming" onchange="renderHistoryData()">
+<option value="all" selected>朝＋夜</option><option value="morning">朝</option><option value="night">夜</option>
+</select></label>
+</div></div>
+<div id="historyDataList"></div>
+</main></section>
 <section id="charts" class="screen"><main>
 <div class="card">
   <div class="title">推移グラフ</div>
@@ -133,7 +159,9 @@ function loadData(){
   return defaultData()
 }
 function save(){data.version=13.1;localStorage.setItem(K,JSON.stringify(data))}
-function go(id,btn){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('sel'));if(btn)btn.classList.add('sel');else{let n=document.querySelector('[data-nav="'+id+'"]');if(n)n.classList.add('sel')}document.getElementById('pageTitle').textContent={home:'今日の記録',record:'記録',plan:'今日の提案',charts:'グラフ',settings:'設定'}[id]||'からだログ';if(id==='charts')charts();scrollTo(0,0)}
+function _goV14(id,btn){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('sel'));if(btn)btn.classList.add('sel');else{let n=document.querySelector('[data-nav="'+id+'"]');if(n)n.classList.add('sel')}document.getElementById('pageTitle').textContent={home:'今日の記録',record:'記録',plan:'今日の提案',charts:'グラフ',settings:'設定'}[id]||'からだログ';if(id==='charts')charts();scrollTo(0,0)}
+function go(id){_goV14(id);if(id==='historyData')renderHistoryData();}
+
 function choices(k,id){document.getElementById(id).innerHTML=labels[k].map((x,i)=>`<button class="${data.today[k]===i?'sel':''}" onclick="feel('${k}',${i})">${em[k][i]}<small>${x}</small></button>`).join('')}
 function feel(k,v){data.today[k]=v;save();render();plan()}
 function setPeriod(v){data.today.period=v;document.getElementById('morning').classList.toggle('sel',v==='朝');document.getElementById('night').classList.toggle('sel',v==='夜')}
@@ -164,6 +192,31 @@ function setupChartCompare(){
   if(!box)return;
   box.innerHTML=chartFields.map(([k,v])=>`<label><input type="checkbox" value="${k}"> ${v}</label>`).join('');
   box.querySelectorAll('input').forEach(el=>el.addEventListener('change',charts));
+}
+
+function historyDisplayValue(item,key){
+ const units={weight:'kg',fat:'%',muscle:'kg',bone:'kg',basal:'kcal',age:'歳',waist:'cm',exercise:'分'};
+ if(key==='bmi'){const n=chartValue(item,'bmi');return Number.isFinite(n)?n.toFixed(1):'—'}
+ const v=item[key]; if(v===undefined||v===null||v==='')return '—';
+ if(['condition','fatigue','pain'].includes(key)){const n=Number(v);return Number.isFinite(n)?'●'.repeat(Math.max(0,Math.min(5,n)))+'○'.repeat(Math.max(0,5-n)):String(v)}
+ const n=Number(v); return Number.isFinite(n)?String(v)+(units[key]?' '+units[key]:''):String(v);
+}
+function historyDateValue(x){return x.date||x.day||x.createdAt||''}
+function historyTimingValue(x){return x.timing||x.timeOfDay||x.session||x.period||''}
+function renderHistoryData(){
+ const root=document.getElementById('historyDataList');if(!root||!data||!Array.isArray(data.history))return;
+ const period=document.getElementById('historyPeriod')?.value||'all',timing=document.getElementById('historyTiming')?.value||'all';
+ let rows=data.history.slice().reverse();
+ if(period!=='all'){const days=Number(period),now=Date.now();rows=rows.filter(x=>{const d=new Date(historyDateValue(x));return !isNaN(d)&&now-d.getTime()<=days*86400000})}
+ if(timing!=='all')rows=rows.filter(x=>historyTimingValue(x)===timing);
+ if(!rows.length){root.innerHTML='<div class="card"><div class="sub">該当する測定データはありません。</div></div>';return}
+ const keys=[['weight','体重'],['bmi','BMI'],['fat','体脂肪率'],['muscle','筋肉量'],['bone','推定骨量'],['visceral','内臓脂肪'],['basal','基礎代謝'],['age','体内年齢'],['waist','腹囲'],['condition','体調'],['fatigue','疲れ'],['pain','痛み'],['exercise','運動']];
+ root.innerHTML=rows.map(x=>{
+  const d=historyDateValue(x),date=d?new Date(d).toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}):'日付不明';
+  const t=historyTimingValue(x)==='morning'?'🌅 朝':historyTimingValue(x)==='night'?'🌙 夜':historyTimingValue(x)||'';
+  const cells=keys.map(([k,l])=>{const v=historyDisplayValue(x,k);return v==='—'?'':`<div class="history-item"><div class="label">${l}</div><div class="value">${v}</div></div>`}).filter(Boolean).join('');
+  return `<div class="card history-day"><div class="day-head"><div class="day-title">${date}</div><div class="timing">${t}</div></div><div class="history-grid">${cells||'<div class="sub">記録された数値がありません。</div>'}</div></div>`;
+ }).join('');
 }
 function charts(){
   const names=Object.fromEntries(chartFields);
