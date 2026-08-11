@@ -20,7 +20,7 @@
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.input{width:100%;padding:11px;border:1px solid #dfe3e8;border-radius:10px;font-size:15px;background:#fff}
 .choices{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.choices button{border:1px solid transparent;background:#f4f6f8;border-radius:12px;padding:7px 2px;min-height:70px;font-size:27px}.choices button small{display:block;font-size:9px;color:var(--m);margin-top:3px}.choices button.sel{border-color:var(--b);background:#edf4ff}
 .three{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.three button{border:1px solid #dfe3e8;background:#fff;border-radius:10px;padding:10px 4px;font-weight:700}.three button.sel{border-color:var(--b);background:#edf4ff;color:var(--b)}
-.exercise{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--l)}.exercise:last-child{border:0}.illus{height:58px;border-radius:13px;background:#eef6ff;display:flex;align-items:center;justify-content:center;font-size:32px}.exercise small{display:block;color:var(--m);font-size:11px;margin-top:3px}.exercise .time{font-size:12px;color:var(--m)}
+.illus img{width:100%;height:100%;object-fit:cover;border-radius:13px}.exercise{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--l)}.exercise:last-child{border:0}.illus{height:58px;border-radius:13px;background:#eef6ff;display:flex;align-items:center;justify-content:center;font-size:32px}.exercise small{display:block;color:var(--m);font-size:11px;margin-top:3px}.exercise .time{font-size:12px;color:var(--m)}
 .banner{border-radius:13px;background:#f1f7ff;padding:12px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tabs{display:flex;gap:6px;overflow:auto;margin-bottom:10px}.tabs button{white-space:nowrap;border:1px solid #dfe3e8;background:#fff;border-radius:9px;padding:8px 10px}.tabs button.sel{background:#edf4ff;color:var(--b);border-color:var(--b)}
 .chart{height:190px;position:relative;border-left:1px solid #ccd2d9;border-bottom:1px solid #ccd2d9;margin:12px 8px 20px}.chart svg{width:100%;height:100%}.chart-label{font-size:10px;color:var(--m);display:flex;justify-content:space-between}
 .nav{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:auto;background:#fff;border-top:1px solid var(--l);display:grid;grid-template-columns:repeat(4,1fr);padding:7px 3px calc(7px + env(safe-area-inset-bottom));z-index:10}.nav button{border:0;background:none;color:#808892;font-size:10px}.nav button.sel{color:var(--b);font-weight:750}.nav i{display:block;font-style:normal;font-size:20px;margin-bottom:2px}.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:#20242a;color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;display:none;z-index:20}
@@ -54,13 +54,21 @@
 <section id="plan" class="screen"><main><div class="card"><div class="title">今日のエクササイズ提案</div><div id="planMessage"></div><button id="startWorkoutBtn" class="btn" style="width:100%;margin:8px 0 12px" onclick="startWorkoutFromPlan()">▶️ この日のメニューを通しで開始</button>
 <div id="planList"></div></div><div class="card"><div class="title">メニューの考え方</div><div class="sub">ウエスト引き締めを中心に、器具なし・自宅・夜でも静かにできる内容を優先します。痛みや疲れが強い日は強度を下げます。</div></div></main></section>
 
-<section id="charts" class="screen"><main><div class="card"><div class="title">推移グラフ</div><div id="chartTabs" class="tabs"></div><div id="chartTitle" class="sub"></div><div id="chart" class="chart"></div><div id="chartLabels" class="chart-label"></div></div><div class="card"><div class="title">記録一覧</div><div id="history"></div></div></main></section>
-
-<div id="chartCompare" class="chart-compare">
-  <b>📊 グラフを重ねて比較</b>
-  <div class="sub">比較したい項目を2つ以上選択できます。</div>
+<section id="charts" class="screen"><main>
+<div class="card">
+  <div class="title">推移グラフ</div>
+  <div id="chartTabs" class="tabs"></div>
+  <div id="chartTitle" class="sub"></div>
+  <div id="chart" class="chart"></div>
+  <div id="chartLabels" class="chart-label"></div>
+</div>
+<div class="card">
+  <div class="title">📊 グラフを重ねて比較</div>
+  <div class="sub">比較したい項目を2つ以上選ぶと、変化の傾向を重ねて見られます。</div>
   <div class="checks" id="chartChecks"></div>
 </div>
+<div class="card"><div class="title">記録一覧</div><div id="history"></div></div>
+</main></section>
 
 <section id="settings" class="screen"><main>
 <div class="card"><div class="title">基礎データ</div><div class="grid2"><input id="height" class="input" type="number" step="0.1" placeholder="身長 cm"><select id="gender" class="input"><option value="">性別</option><option>男性</option><option>女性</option></select><input id="birth" class="input" type="number" placeholder="生まれた年"><input id="goalWaist" class="input" type="number" step="0.1" placeholder="目標腹囲 cm"></div><button class="btn" style="margin-top:10px" onclick="saveSettings()">設定を保存</button></div>
@@ -92,10 +100,28 @@
 const K='karadaLogV13', OLD='karadaLogV13';
 const labels={c:['絶好調','好調','普通','不調','絶不調'],f:['全然ない','あまりない','普通','かなりある','とても強い'],p:['なし','ほぼなし','少しある','つらい','かなり強い']};
 const em={c:['😁','🙂','😐','🙁','😣'],f:['😁','🙂','😐','😣','🥵'],p:['😁','🙂','😐','😣','😭']};
-const ex={light:[['デッドバグ','ゆっくり手足を動かす','🛌'],['ヒップリフト','腰を反らさず持ち上げる','🙆'],['骨盤まわりストレッチ','呼吸しながらゆっくり','🧘']],normal:[['デッドバグ','お腹を軽く締めて交互に動かす','🛌'],['ヒップリフト','腰を反らさず持ち上げる','🙆'],['バードドッグ','四つ這いから対角の手足を伸ばす','🐕'],['プランク','無理のない範囲で体幹をキープ','🧘']],hard:[['デッドバグ','ゆっくり丁寧に反復','🛌'],['ヒップリフト','上で一呼吸止める','🙆'],['バードドッグ','対角の手足を伸ばして保持','🐕'],['スロースクワット','静かにゆっくりしゃがむ','🏃'],['プランク','体幹をまっすぐ保つ','🧘']]};
+const ex={
+light:[
+ ['デッドバグ','ゆっくり手足を動かす','🛌','assets/exercise-deadbug.png'],
+ ['ヒップリフト','腰を反らさず持ち上げる','🙆','assets/exercise-hiplift.png'],
+ ['骨盤まわりストレッチ','呼吸しながらゆっくり','🧘','assets/exercise-kneetochest.png']
+],
+normal:[
+ ['デッドバグ','お腹を軽く締めて交互に動かす','🛌','assets/exercise-deadbug.png'],
+ ['ヒップリフト','腰を反らさず持ち上げる','🙆','assets/exercise-hiplift.png'],
+ ['バードドッグ','四つ這いから対角の手足を伸ばす','🐕','assets/exercise-birddog.png'],
+ ['プランク','無理のない範囲で体幹をキープ','🧘','assets/exercise-plank.png']
+],
+hard:[
+ ['デッドバグ','ゆっくり丁寧に反復','🛌','assets/exercise-deadbug.png'],
+ ['ヒップリフト','上で一呼吸止める','🙆','assets/exercise-hiplift.png'],
+ ['バードドッグ','対角の手足を伸ばして保持','🐕','assets/exercise-birddog.png'],
+ ['スロースクワット','静かにゆっくりしゃがむ','🏃','assets/exercise-slowsquat.png'],
+ ['プランク','体幹をまっすぐ保つ','🧘','assets/exercise-plank.png']
+]};
 let data=loadData(), metric='weight';
 
-function defaultData(){return {version:12,settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通'},history:[]}}
+function defaultData(){return {version:13.1,settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通'},history:[]}}
 function loadData(){
   try{
     let raw=localStorage.getItem(K);
@@ -106,7 +132,7 @@ function loadData(){
   }catch(e){}
   return defaultData()
 }
-function save(){data.version=13;localStorage.setItem(K,JSON.stringify(data))}
+function save(){data.version=13.1;localStorage.setItem(K,JSON.stringify(data))}
 function go(id,btn){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('sel'));if(btn)btn.classList.add('sel');else{let n=document.querySelector('[data-nav="'+id+'"]');if(n)n.classList.add('sel')}document.getElementById('pageTitle').textContent={home:'今日の記録',record:'記録',plan:'今日の提案',charts:'グラフ',settings:'設定'}[id]||'からだログ';if(id==='charts')charts();scrollTo(0,0)}
 function choices(k,id){document.getElementById(id).innerHTML=labels[k].map((x,i)=>`<button class="${data.today[k]===i?'sel':''}" onclick="feel('${k}',${i})">${em[k][i]}<small>${x}</small></button>`).join('')}
 function feel(k,v){data.today[k]=v;save();render();plan()}
@@ -119,12 +145,75 @@ function bmi(){let h=+data.settings.height,w=+data.today.weight;return h&&w?(w/(
 function saveRecord(){read();let x={...data.today,date:new Date().toISOString().slice(0,10)};data.history.push(x);if(data.history.length>180)data.history.shift();save();render();plan();toast('記録を保存しました');go('plan')}
 function saveSettings(){data.settings.height=+height.value||'';data.settings.gender=gender.value;data.settings.birth=+birth.value||'';data.settings.goalWaist=+goalWaist.value||'';save();sync();updateHome();toast('設定を保存しました')}
 function level(){if(data.today.p>=3||data.today.f>=3||data.today.c>=3)return'light';if(data.today.c===0&&data.today.f<=1&&data.today.p<=1&&data.today.intensity==='しっかり')return'hard';return data.today.intensity==='軽め'?'light':data.today.intensity==='しっかり'?'hard':'normal'}
-function plan(){let t=+data.today.tennis||0,time=+data.today.time||10,type=level(),nm={light:'軽め',normal:'普通',hard:'しっかり'}[type];if(t>=15){planMessage.innerHTML=`<div class="banner"><b>🎾 今日はテニスを${t}分しました</b><div class="sub">すでに運動できています。今夜は追加運動を休んでもOKです。</div><div class="actions" style="margin-top:9px"><button class="btn secondary" onclick="restPlan()">今日は休む</button><button class="btn secondary" onclick="fivePlan()">5分だけ</button></div><button class="btn" style="margin-top:8px" onclick="keepPlan()">予定どおり</button></div>`;planList.innerHTML='';return}planMessage.innerHTML=`<div class="banner"><b>🎯 ウエスト引き締め　${nm}・${time}分</b><div class="sub">自宅・器具なし・夜でも静かにできるメニュー。</div></div>`;let a=ex[type],n=time===5?2:time===10?3:a.length;planList.innerHTML=a.slice(0,n).map(e=>`<div class="exercise"><div class="illus">${e[2]}</div><div><b>${e[0]}</b><small>${e[1]}</small></div><span class="time">${time===15?'2〜3':'1〜2'}分</span></div>`).join('')}
+function plan(){let t=+data.today.tennis||0,time=+data.today.time||10,type=level(),nm={light:'軽め',normal:'普通',hard:'しっかり'}[type];if(t>=15){planMessage.innerHTML=`<div class="banner"><b>🎾 今日はテニスを${t}分しました</b><div class="sub">すでに運動できています。今夜は追加運動を休んでもOKです。</div><div class="actions" style="margin-top:9px"><button class="btn secondary" onclick="restPlan()">今日は休む</button><button class="btn secondary" onclick="fivePlan()">5分だけ</button></div><button class="btn" style="margin-top:8px" onclick="keepPlan()">予定どおり</button></div>`;planList.innerHTML='';return}planMessage.innerHTML=`<div class="banner"><b>🎯 ウエスト引き締め　${nm}・${time}分</b><div class="sub">自宅・器具なし・夜でも静かにできるメニュー。</div></div>`;let a=ex[type],n=time===5?2:time===10?3:a.length;planList.innerHTML=a.slice(0,n).map(e=>`<div class="exercise"><div class="illus"><img src="${e[3]}" alt="${e[0]}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none">${e[2]}</span></div><div><b>${e[0]}</b><small>${e[1]}</small></div><span class="time">${time===15?'2〜3':'1〜2'}分</span></div>`).join('')}
 function restPlan(){planMessage.innerHTML='<div class="banner"><b>🌙 今日は休養</b><div class="sub">テニスで十分動けています。休むことも大切です。</div></div>';planList.innerHTML=''}
 function fivePlan(){data.today.time=5;save();plan()}function keepPlan(){data.today.tennis=0;save();plan()}
 function updateHome(){homeC.textContent=em.c[data.today.c];homeCT.textContent=labels.c[data.today.c];homeF.textContent=em.f[data.today.f];homeFT.textContent=labels.f[data.today.f];homeP.textContent=em.p[data.today.p];homePT.textContent=labels.p[data.today.p];homeWeight.textContent=data.today.weight?data.today.weight+' kg':'—';homeBMI.textContent=bmi();homeFat.textContent=data.today.fat?data.today.fat+' %':'—';homeMuscle.textContent=data.today.muscle?data.today.muscle+' kg':'—';homeWaist.textContent=data.today.waist?data.today.waist+' cm':'—'}
 function renderHistory(){history.innerHTML=data.history.slice().reverse().slice(0,12).map(x=>`<div class="metric"><span>${x.date} ${x.period||''}</span><b>${x.weight?x.weight+'kg':'測定なし'} ${x.waist?x.waist+'cm':''}</b></div>`).join('')||'<div class="sub">まだ記録がありません。</div>'}
-function charts(){let names={weight:'体重',bmi:'BMI',fat:'体脂肪率',muscle:'筋肉量',bone:'推定骨量',visceral:'内臓脂肪レベル',basal:'基礎代謝',age:'体内年齢',waist:'腹囲'};chartTabs.innerHTML=Object.entries(names).map(([k,v])=>`<button class="${metric===k?'sel':''}" onclick="metric='${k}';charts()">${v}</button>`).join('');chartTitle.textContent=names[metric];let v=data.history.map(x=>metric==='bmi'?(+x.weight&&+data.settings.height?+x.weight/((+data.settings.height/100)**2):null):+x[metric]).filter(Number.isFinite);if(!v.length){chart.innerHTML='<div class="sub" style="padding:15px">記録が増えるとグラフが表示されます。</div>';chartLabels.innerHTML='';renderHistory();return}let mn=Math.min(...v),mx=Math.max(...v);if(mn===mx){mn-=1;mx+=1}let pts=v.map((z,i)=>`${4+i/(Math.max(1,v.length-1))*92},${94-(z-mn)/(mx-mn)*84}`).join(' ');chart.innerHTML=`<svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="#2878e8" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>`;chartLabels.innerHTML=`<span>${mn.toFixed(1)}</span><span>${mx.toFixed(1)}</span>`;renderHistory()}
+const chartFields=[
+ ['weight','体重'],['bmi','BMI'],['fat','体脂肪率'],['muscle','筋肉量'],
+ ['bone','推定骨量'],['visceral','内臓脂肪レベル'],['basal','基礎代謝'],
+ ['age','体内年齢'],['waist','腹囲']
+];
+function chartValue(x,k){
+  if(k==='bmi') return (+x.weight&&+data.settings.height)?+x.weight/((+data.settings.height/100)**2):null;
+  const n=+x[k]; return Number.isFinite(n)?n:null;
+}
+function setupChartCompare(){
+  const box=document.getElementById('chartChecks');
+  if(!box)return;
+  box.innerHTML=chartFields.map(([k,v])=>`<label><input type="checkbox" value="${k}"> ${v}</label>`).join('');
+  box.querySelectorAll('input').forEach(el=>el.addEventListener('change',charts));
+}
+function charts(){
+  const names=Object.fromEntries(chartFields);
+  chartTabs.innerHTML=Object.entries(names).map(([k,v])=>`<button class="${metric===k?'sel':''}" onclick="metric='${k}';charts()">${v}</button>`).join('');
+
+  const selected=[...document.querySelectorAll('#chartChecks input:checked')].map(x=>x.value);
+  chartTitle.textContent=selected.length>=2 ? '選択項目の変化（各項目を0〜100に正規化）' : names[metric];
+
+  if(selected.length<2){
+    let v=data.history.map(x=>chartValue(x,metric)).filter(Number.isFinite);
+    if(!v.length){
+      chart.innerHTML='<div class="sub" style="padding:15px">記録が増えるとグラフが表示されます。</div>';
+      chartLabels.innerHTML='';
+      renderHistory();
+      return;
+    }
+    let mn=Math.min(...v),mx=Math.max(...v);
+    if(mn===mx){mn-=1;mx+=1}
+    let pts=v.map((z,i)=>`${4+i/(Math.max(1,v.length-1))*92},${94-(z-mn)/(mx-mn)*84}`).join(' ');
+    chart.innerHTML=`<svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="#2878e8" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>`;
+    chartLabels.innerHTML=`<span>${mn.toFixed(1)}</span><span>${mx.toFixed(1)}</span>`;
+    renderHistory();
+    return;
+  }
+
+  const series=selected.map(k=>{
+    const vals=data.history.map(x=>chartValue(x,k));
+    const finite=vals.filter(Number.isFinite);
+    const mn=finite.length?Math.min(...finite):0;
+    const mx=finite.length?Math.max(...finite):1;
+    return {k, vals, mn, mx};
+  });
+
+  const colors=['#2878e8','#2aa876','#e09b25','#9b59b6','#d65a5a','#00a6a6','#777'];
+  let svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none">';
+  series.forEach((ser,si)=>{
+    const pts=ser.vals.map((z,i)=>{
+      if(!Number.isFinite(z))return null;
+      const x=4+i/(Math.max(1,ser.vals.length-1))*92;
+      const y=94-(ser.mx===ser.mn?50:(z-ser.mn)/(ser.mx-ser.mn)*84);
+      return `${x},${y}`;
+    }).filter(Boolean).join(' ');
+    if(pts)svg+=`<polyline points="${pts}" fill="none" stroke="${colors[si%colors.length]}" stroke-width="1.8" vector-effect="non-scaling-stroke"/>`;
+  });
+  svg+='</svg>';
+  chart.innerHTML=svg;
+  chartLabels.innerHTML=series.map((ser,si)=>`<span style="margin-right:8px"><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colors[si%colors.length]}"></i> ${names[ser.k]}</span>`).join('');
+  renderHistory();
+}
+
 function makeBackupBlob(){
   save();
   return new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -160,16 +249,17 @@ function updateBackupStatus(){
     ? '最終更新：'+new Date(m.lastBackup).toLocaleString('ja-JP',{dateStyle:'medium',timeStyle:'short'})+'（この端末内）'
     : 'このアプリを開いた日に自動更新します。';
 }
-function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.settings||!d.history)throw Error();data=d;data.version=13;data.meta=data.meta||{};save();render();updateBackupStatus();toast('データを復元しました')}catch(x){alert('このバックアップは読み込めませんでした。')}};r.readAsText(f);e.target.value=''}
+function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.settings||!d.history)throw Error();data=d;data.version=13.1;data.meta=data.meta||{};save();render();updateBackupStatus();toast('データを復元しました')}catch(x){alert('このバックアップは読み込めませんでした。')}};r.readAsText(f);e.target.value=''}
 
 let workoutState={items:[],index:0,left:0,running:false,id:null};
 function buildWorkoutPlan(){
-  const course=Number(typeof time!=="undefined"?time:10);
-  const list=(typeof ex!=="undefined"?(ex[typeof intensity!=="undefined"?intensity:"normal"]||ex.normal):[]);
-  const count=course<=5?3:course<=10?4:5;
+  const course=Number(data.today.time||10);
+  const type=level();
+  const list=ex[type]||ex.normal;
+  const count=course===5?2:course===10?3:list.length;
   const chosen=list.slice(0,count);
   const rest=15;
-  const active=Math.max(30,Math.floor((course*60-rest*(chosen.length-1))/chosen.length));
+  const active=Math.max(30,Math.floor((course*60-rest*Math.max(0,chosen.length-1))/Math.max(1,chosen.length)));
   return chosen.map((e,i)=>({name:e[0],sec:active,rest:i<chosen.length-1?rest:0}));
 }
 function startWorkoutFromPlan(){
