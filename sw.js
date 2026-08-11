@@ -1,4 +1,4 @@
-const CACHE='karada-log-shell-v12';
+const CACHE='karada-log-shell-v13';
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./manifest.json','./icon-180.png','./apple-touch-icon.png'])))});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
