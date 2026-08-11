@@ -36,11 +36,11 @@
 .chart-compare .checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .chart-compare label{font-size:12px;background:#f5f7fa;border-radius:10px;padding:6px 8px}
 
-.record-date-row{display:grid;grid-template-columns:minmax(145px,0.9fr) minmax(0,1.4fr);gap:12px;align-items:end;margin-top:10px;padding:10px 12px;border-radius:12px;background:#f6f8fa}
-.record-date-row label{font-size:12px;font-weight:700;min-width:0}.record-date-row input{display:block;width:100%;margin-top:5px;min-width:0}
+.record-date-row{display:grid;grid-template-columns:minmax(0,40%) minmax(0,1fr);gap:16px;align-items:end;margin-top:10px;padding:10px 12px;border-radius:12px;background:#f6f8fa}
+.record-date-row label{font-size:12px;font-weight:700;min-width:0;display:block}.record-date-row input{display:block;width:100%;max-width:100%;margin-top:5px;min-width:0}
 .record-date-note{font-size:11px;line-height:1.5;margin:0 0 3px;min-width:0;overflow-wrap:anywhere}
 .unit-input{position:relative;width:100%}.unit-input .input{padding-right:38px}.unit-input .unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--m);pointer-events:none}
-@media(max-width:480px){.record-date-row{grid-template-columns:1fr;gap:6px}.record-date-row input{max-width:100%}.record-date-note{font-size:11px;margin:0}.record-date-row label{overflow:hidden}}
+@media(max-width:600px){.record-date-row{grid-template-columns:1fr;gap:6px}.record-date-row input{max-width:100%}.record-date-note{font-size:11px;margin:0}.record-date-row label{overflow:hidden}}
 .history-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .history-tools label{font-size:12px;font-weight:700}
 .history-tools select{display:block;width:100%;margin-top:5px;padding:9px;border:1px solid #dfe5eb;border-radius:10px;background:#fff}
@@ -199,7 +199,7 @@ function loadData(){
   }catch(e){}
   return defaultData()
 }
-function save(){data.version=18.0;localStorage.setItem(K,JSON.stringify(data))}
+function save(){data.version=18.1;localStorage.setItem(K,JSON.stringify(data))}
 function _goV14(id,btn){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('sel'));if(btn)btn.classList.add('sel');else{let n=document.querySelector('[data-nav="'+id+'"]');if(n)n.classList.add('sel')}document.getElementById('pageTitle').textContent={home:'今日の記録',record:'記録',plan:'今日の提案',charts:'グラフ',settings:'設定'}[id]||'からだログ';if(id==='charts')charts();scrollTo(0,0)}
 function go(id){_goV14(id);if(id==='historyData')renderHistoryData();}
 
@@ -448,7 +448,7 @@ function startWorkoutFromPlan(){
   workoutState.index=0;workoutState.running=false;
   clearInterval(workoutState.id);
   workoutState.left=workoutState.items[0]?.sec||0;
-  updateWorkoutUI();workoutModal.classList.add("show");requestWorkoutWakeLock();
+  updateWorkoutUI();workoutModal.classList.add("show");
 }
 function formatTimer(sec){sec=Math.max(0,Math.ceil(sec));return String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0")}
 function updateWorkoutUI(){
