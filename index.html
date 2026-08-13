@@ -704,6 +704,7 @@ function buildWorkoutPlan(){
   return expanded;
 }
 function startWorkoutFromPlan(){
+  yuiPrepareAudio();
   workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.running=false;workoutState.finished=false;clearInterval(workoutState.id);clearInterval(workoutState.idleId);
   workoutState.left=workoutState.items[0]?.sec||0;hideWorkoutInterrupt();updateWorkoutUI();workoutModal.classList.add("show");requestWorkoutWakeLock();
 }
@@ -740,6 +741,8 @@ function updateWorkoutUI(){
   if(counter)counter.innerHTML=item.cooldown?'🧘 軽く整えて終了':dose.mode==='reps'?`目安：<b>${dose.value}回</b>　（${dose.min}〜${dose.max}回）`:`目安：<b>${dose.value}秒</b>`;
 }
 function advanceWorkout(){
+  /* v1.9.3: short tone at each exercise countdown end */
+  yuiWorkoutTone("exercise");
   clearInterval(workoutState.id);workoutState.id=null;const item=workoutState.items[workoutState.index];
   if(item.rest>0){
     let r=item.rest;workoutCurrent.textContent="☕ 休憩";const yui=document.getElementById('workoutYui');if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.relieved}`;workoutNum.textContent=formatTimer(r);workoutBar.style.width="0%";
@@ -753,6 +756,8 @@ function toggleWorkout(){
   workoutState.id=setInterval(()=>{workoutState.left--;if(workoutState.left<=0)advanceWorkout();else updateWorkoutUI()},1000);
 }
 function markWorkoutFinished(){
+  /* v1.9.3: distinct tone when the entire workout ends */
+  yuiWorkoutTone("all");
   clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutState.finished=true;
   updateWorkoutUI();
 }
@@ -820,4 +825,40 @@ function render(){choices('c','cChoices');choices('f','fChoices');choices('p','p
 render();
 autoBackup();setupChartCompare();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+
+/* v1.9.3: workout timer tones */
+function yuiPrepareAudio(){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    if(!window.__yuiAudioCtx)window.__yuiAudioCtx=new AC();
+    if(window.__yuiAudioCtx.state==="suspended")window.__yuiAudioCtx.resume().catch(()=>{});
+  }catch(e){}
+}
+function yuiWorkoutTone(kind){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    if(!window.__yuiAudioCtx)window.__yuiAudioCtx=new AC();
+    const ctx=window.__yuiAudioCtx;
+    const play=()=>{
+      const now=ctx.currentTime;
+      const osc=ctx.createOscillator(), gain=ctx.createGain();
+      osc.type="sine";
+      const finalTone=kind==="all";
+      osc.frequency.setValueAtTime(finalTone?880:660,now);
+      gain.gain.setValueAtTime(0.0001,now);
+      gain.gain.exponentialRampToValueAtTime(finalTone?0.15:0.09,now+0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001,now+(finalTone?0.24:0.12));
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.start(now);osc.stop(now+(finalTone?0.26:0.14));
+      if(finalTone){
+        setTimeout(()=>yuiWorkoutTone("all2"),110);
+      }
+    };
+    if(ctx.state==="suspended")ctx.resume().then(play).catch(()=>{});
+    else play();
+  }catch(e){}
+}
+
 </script></div></body></html>
