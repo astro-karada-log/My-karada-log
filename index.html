@@ -69,6 +69,14 @@
 .analysis-row:last-child{border-bottom:0}
 .analysis-row b{text-align:right}
 @media(max-width:420px){.nav button{font-size:9px}.nav i{font-size:18px}.analysis-summary{grid-template-columns:1fr 1fr}}
+
+.workout-confirm{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:5;padding:20px}
+.workout-confirm.show{display:flex}
+.workout-confirm-box{width:min(100%,360px);background:var(--card,#fff);border-radius:18px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.2);text-align:center}
+.workout-confirm-title{font-weight:700;font-size:18px;margin-bottom:8px}
+.workout-confirm-text{font-size:14px;line-height:1.6;margin-bottom:16px}
+.workout-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.workout-complete-btn[disabled]{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body><div class="app">
@@ -190,7 +198,21 @@
       <button class="btn" id="workoutStartBtn" onclick="toggleWorkout()">▶ 開始</button>
       <button class="btn secondary" onclick="resetWorkout()">↺ リセット</button>
     </div>
-    <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeWorkout()">終了</button>
+    <div class="workout-actions" style="margin-top:8px">
+      <button class="btn workout-complete-btn" id="workoutCompleteBtn" onclick="completeWorkout()" disabled>🏁 完了</button>
+      <button class="btn secondary" id="workoutInterruptBtn" onclick="showWorkoutInterrupt()">⏸ 中断する</button>
+    </div>
+    <button class="btn secondary" style="width:100%;margin-top:8px" onclick="closeWorkout()">閉じる</button>
+    <div id="workoutConfirm" class="workout-confirm" aria-hidden="true">
+      <div class="workout-confirm-box">
+        <div class="workout-confirm-title">トレーニングを中断しますか？</div>
+        <div class="workout-confirm-text">ここまで実施した内容を「中断」として記録できます。</div>
+        <div class="workout-confirm-actions">
+          <button class="btn" onclick="resumeWorkout()">▶ 再開する</button>
+          <button class="btn secondary" onclick="stopWorkoutHere()">⏹ ここでやめておく</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 <div id="toast" class="toast"></div>
@@ -665,7 +687,7 @@ function updateBackupStatus(){
 }
 function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!d.settings||!d.history)throw Error();data=d;data.version=13.1;data.meta=data.meta||{};save();render();updateBackupStatus();toast('データを復元しました')}catch(x){alert('このバックアップは読み込めませんでした。')}};r.readAsText(f);e.target.value=''}
 
-let workoutState={items:[],index:0,left:0,running:false,id:null,idleId:null};
+let workoutState={items:[],index:0,left:0,running:false,id:null,idleId:null,finished:false};
 let workoutWakeLock=null;
 async function requestWorkoutWakeLock(){
   if(!('wakeLock' in navigator)) return;
@@ -682,12 +704,29 @@ function buildWorkoutPlan(){
   return expanded;
 }
 function startWorkoutFromPlan(){
-  workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.running=false;clearInterval(workoutState.id);clearInterval(workoutState.idleId);
-  workoutState.left=workoutState.items[0]?.sec||0;updateWorkoutUI();workoutModal.classList.add("show");requestWorkoutWakeLock();
+  workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.running=false;workoutState.finished=false;clearInterval(workoutState.id);clearInterval(workoutState.idleId);
+  workoutState.left=workoutState.items[0]?.sec||0;hideWorkoutInterrupt();updateWorkoutUI();workoutModal.classList.add("show");requestWorkoutWakeLock();
 }
 function formatTimer(sec){sec=Math.max(0,Math.ceil(sec));return String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0")}
 function updateWorkoutUI(){
-  const item=workoutState.items[workoutState.index];if(!item)return;
+  const item=workoutState.items[workoutState.index];
+  const completeBtn=document.getElementById('workoutCompleteBtn');
+  const interruptBtn=document.getElementById('workoutInterruptBtn');
+  if(completeBtn)completeBtn.disabled=!workoutState.finished;
+  if(interruptBtn)interruptBtn.style.display=workoutState.finished?'none':'block';
+  if(workoutState.finished){
+    workoutStartBtn.disabled=true;
+    workoutStartBtn.textContent="✓ 終了";
+    workoutCurrent.textContent="🎉 トレーニング完了！";
+    workoutNum.textContent="00:00";
+    workoutBar.style.width="100%";
+    workoutNext.textContent="「完了」を押して記録します";
+    const yui=document.getElementById('workoutYui');if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.complete}`;
+    const counter=document.getElementById('workoutCounter');if(counter)counter.textContent="最後まで実施しました";
+    return;
+  }
+  workoutStartBtn.disabled=false;
+  if(!item)return;
   const yui=document.getElementById('workoutYui');
   if(yui)yui.src=`assets/yui/${YUI_FACE_FILES[item.cooldown?'together':workoutState.running?'cheer':'agree']}`;
   workoutCurrent.textContent=item.name;
@@ -705,26 +744,77 @@ function advanceWorkout(){
   if(item.rest>0){
     let r=item.rest;workoutCurrent.textContent="☕ 休憩";const yui=document.getElementById('workoutYui');if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.relieved}`;workoutNum.textContent=formatTimer(r);workoutBar.style.width="0%";
     const counter=document.getElementById('workoutCounter');if(counter)counter.textContent=`次の種目まで ${r}秒`;
-    workoutState.id=setInterval(()=>{r--;workoutNum.textContent=formatTimer(r);if(r<=0){clearInterval(workoutState.id);workoutState.id=null;workoutState.index++;if(workoutState.index>=workoutState.items.length){finishWorkout();return}workoutState.left=workoutState.items[workoutState.index].sec;workoutState.running=true;updateWorkoutUI();}},1000);
-  }else{workoutState.index++;if(workoutState.index>=workoutState.items.length){finishWorkout();return}workoutState.left=workoutState.items[workoutState.index].sec;updateWorkoutUI()}
+    workoutState.id=setInterval(()=>{r--;workoutNum.textContent=formatTimer(r);if(r<=0){clearInterval(workoutState.id);workoutState.id=null;workoutState.index++;if(workoutState.index>=workoutState.items.length){markWorkoutFinished();return}workoutState.left=workoutState.items[workoutState.index].sec;workoutState.running=true;updateWorkoutUI();}},1000);
+  }else{workoutState.index++;if(workoutState.index>=workoutState.items.length){markWorkoutFinished();return}workoutState.left=workoutState.items[workoutState.index].sec;updateWorkoutUI()}
 }
 function toggleWorkout(){
   if(workoutState.running){clearInterval(workoutState.id);workoutState.running=false;updateWorkoutUI();return}
   workoutState.running=true;updateWorkoutUI();
   workoutState.id=setInterval(()=>{workoutState.left--;if(workoutState.left<=0)advanceWorkout();else updateWorkoutUI()},1000);
 }
-function finishWorkout(){
-  clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;
-  const type=level(),duration=Number(data.today.time||10),items=workoutState.items||[];
-  data.workoutHistory=data.workoutHistory||[];
-  data.workoutHistory.push({date:new Date().toISOString(),duration,intensity:type,exercises:items.filter(x=>!x.cooldown).map(x=>({name:x.name,group:x.group,dose:x.dose})),cooldown:items.find(x=>x.cooldown)?.name||'',completed:true});
-  save();
-  workoutCurrent.textContent="🎉 トレーニング完了！";const yui=document.getElementById('workoutYui');if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.complete}`;workoutNum.textContent="00:00";workoutBar.style.width="100%";workoutNext.textContent="おつかれさま！";
-  const counter=document.getElementById('workoutCounter');if(counter)counter.textContent="今日の運動を記録したよ";
-  if(navigator.vibrate)navigator.vibrate([150,80,150]);if(typeof toast==="function")toast("今日のトレーニング完了！");
+function markWorkoutFinished(){
+  clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutState.finished=true;
+  updateWorkoutUI();
 }
-function resetWorkout(){clearInterval(workoutState.id);workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.left=workoutState.items[0]?.sec||0;workoutState.running=false;updateWorkoutUI()}
-function closeWorkout(){clearInterval(workoutState.id);clearInterval(workoutState.idleId);workoutState.id=null;workoutState.idleId=null;workoutState.running=false;workoutModal.classList.remove("show");releaseWorkoutWakeLock()}
+function workoutCompletedItems(){
+  const end=Math.min(workoutState.index,workoutState.items.length);
+  return workoutState.items.slice(0,end).filter(x=>!x.cooldown).map(x=>({name:x.name,group:x.group,dose:x.dose}));
+}
+function saveWorkoutRecord(completed){
+  const type=level(),duration=Number(data.today.time||10),items=completed?workoutState.items:(workoutCompletedItems());
+  data.workoutHistory=data.workoutHistory||[];
+  data.workoutHistory.push({
+    date:new Date().toISOString(),
+    duration,
+    intensity:type,
+    exercises:items.filter(x=>!x.cooldown).map(x=>({name:x.name,group:x.group,dose:x.dose})),
+    cooldown:items.find(x=>x.cooldown)?.name||'',
+    completed:!!completed,
+    status:completed?'completed':'interrupted'
+  });
+  save();
+}
+function completeWorkout(){
+  if(!workoutState.finished)return;
+  saveWorkoutRecord(true);
+  workoutCurrent.textContent="🎉 トレーニング完了！";
+  const yui=document.getElementById('workoutYui');if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.complete}`;
+  workoutNum.textContent="00:00";workoutBar.style.width="100%";workoutNext.textContent="記録しました！";
+  const counter=document.getElementById('workoutCounter');if(counter)counter.textContent="今日の運動を記録したよ";
+  const btn=document.getElementById('workoutCompleteBtn');if(btn)btn.disabled=true;
+  if(navigator.vibrate)navigator.vibrate([150,80,150]);if(typeof toast==="function")toast("今日のトレーニングを記録しました！");
+}
+function showWorkoutInterrupt(){
+  if(workoutState.finished)return;
+  clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;updateWorkoutUI();
+  const el=document.getElementById('workoutConfirm');if(el){el.classList.add('show');el.setAttribute('aria-hidden','false')}
+}
+function hideWorkoutInterrupt(){
+  const el=document.getElementById('workoutConfirm');if(el){el.classList.remove('show');el.setAttribute('aria-hidden','true')}
+}
+function resumeWorkout(){
+  hideWorkoutInterrupt();
+  workoutState.running=false;updateWorkoutUI();toggleWorkout();
+}
+function stopWorkoutHere(){
+  hideWorkoutInterrupt();
+  saveWorkoutRecord(false);
+  workoutCurrent.textContent="⏸ トレーニングを中断しました";
+  const yui=document.getElementById('workoutYui');if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.hmm}`;
+  workoutNext.textContent="ここまでの実施内容を記録しました";
+  const counter=document.getElementById('workoutCounter');if(counter)counter.textContent="中断として記録済み";
+  const btn=document.getElementById('workoutInterruptBtn');if(btn)btn.style.display='none';
+  const cb=document.getElementById('workoutCompleteBtn');if(cb)cb.style.display='none';
+  if(typeof toast==="function")toast("ここまでの内容を中断として記録しました");
+}
+function resetWorkout(){
+  clearInterval(workoutState.id);workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.left=workoutState.items[0]?.sec||0;workoutState.running=false;workoutState.finished=false;hideWorkoutInterrupt();
+  const cb=document.getElementById('workoutCompleteBtn');if(cb){cb.style.display='block';cb.disabled=true}
+  const ib=document.getElementById('workoutInterruptBtn');if(ib)ib.style.display='block';
+  updateWorkoutUI();
+}
+function closeWorkout(){clearInterval(workoutState.id);workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.left=workoutState.items[0]?.sec||0;workoutState.running=false;updateWorkoutUI()}
+function closeWorkout(){clearInterval(workoutState.id);clearInterval(workoutState.idleId);workoutState.id=null;workoutState.idleId=null;workoutState.running=false;hideWorkoutInterrupt();workoutModal.classList.remove("show");releaseWorkoutWakeLock()}
 function toast(t){let e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',1600)}
 function render(){choices('c','cChoices');choices('f','fChoices');choices('p','pChoices');sync();updateHome();plan()}
 render();
