@@ -705,6 +705,8 @@ function buildWorkoutPlan(){
 }
 function startWorkoutFromPlan(){
   yuiPrepareAudio();
+  yuiPrepareVoice();
+  workoutState.yuiVoiceCues={};
   workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.running=false;workoutState.finished=false;clearInterval(workoutState.id);clearInterval(workoutState.idleId);
   workoutState.left=workoutState.items[0]?.sec||0;hideWorkoutInterrupt();updateWorkoutUI();workoutModal.classList.add("show");requestWorkoutWakeLock();
 }
@@ -741,23 +743,23 @@ function updateWorkoutUI(){
   if(counter)counter.innerHTML=item.cooldown?'🧘 軽く整えて終了':dose.mode==='reps'?`目安：<b>${dose.value}回</b>　（${dose.min}〜${dose.max}回）`:`目安：<b>${dose.value}秒</b>`;
 }
 function advanceWorkout(){
-  /* v1.9.3: short tone at each exercise countdown end */
-  yuiWorkoutTone("exercise");
+  /* v1.9.4: Yui says the next exercise is starting */
+  yuiPlayVoice("next","exercise");
   clearInterval(workoutState.id);workoutState.id=null;const item=workoutState.items[workoutState.index];
   if(item.rest>0){
     let r=item.rest;workoutCurrent.textContent="☕ 休憩";const yui=document.getElementById('workoutYui');if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.relieved}`;workoutNum.textContent=formatTimer(r);workoutBar.style.width="0%";
     const counter=document.getElementById('workoutCounter');if(counter)counter.textContent=`次の種目まで ${r}秒`;
-    workoutState.id=setInterval(()=>{r--;workoutNum.textContent=formatTimer(r);if(r<=0){clearInterval(workoutState.id);workoutState.id=null;workoutState.index++;if(workoutState.index>=workoutState.items.length){markWorkoutFinished();return}workoutState.left=workoutState.items[workoutState.index].sec;workoutState.running=true;updateWorkoutUI();}},1000);
-  }else{workoutState.index++;if(workoutState.index>=workoutState.items.length){markWorkoutFinished();return}workoutState.left=workoutState.items[workoutState.index].sec;updateWorkoutUI()}
+    workoutState.id=setInterval(()=>{r--;workoutNum.textContent=formatTimer(r);if(r<=0){clearInterval(workoutState.id);workoutState.id=null;workoutState.index++;if(workoutState.index>=workoutState.items.length){markWorkoutFinished();return}workoutState.left=workoutState.items[workoutState.index].sec;workoutState.yuiVoiceCues={};workoutState.running=true;updateWorkoutUI();}},1000);
+  }else{workoutState.index++;if(workoutState.index>=workoutState.items.length){markWorkoutFinished();return}workoutState.left=workoutState.items[workoutState.index].sec;workoutState.yuiVoiceCues={};updateWorkoutUI()}
 }
 function toggleWorkout(){
   if(workoutState.running){clearInterval(workoutState.id);workoutState.running=false;updateWorkoutUI();return}
   workoutState.running=true;updateWorkoutUI();
-  workoutState.id=setInterval(()=>{workoutState.left--;if(workoutState.left<=0)advanceWorkout();else updateWorkoutUI()},1000);
+  workoutState.id=setInterval(()=>{workoutState.left--;yuiCountdownCue();if(workoutState.left<=0)advanceWorkout();else updateWorkoutUI()},1000);
 }
 function markWorkoutFinished(){
-  /* v1.9.3: distinct tone when the entire workout ends */
-  yuiWorkoutTone("all");
+  /* v1.9.4: Yui announces completion, then says おつかれ！ */
+  yuiPlayVoice("complete","all",()=>yuiPlayVoice("otsukare","all"));
   clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutState.finished=true;
   updateWorkoutUI();
 }
@@ -826,7 +828,7 @@ render();
 autoBackup();setupChartCompare();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 
-/* v1.9.3: workout timer tones */
+/* v1.9.4: workout timer tones */
 function yuiPrepareAudio(){
   try{
     const AC=window.AudioContext||window.webkitAudioContext;
@@ -859,6 +861,41 @@ function yuiWorkoutTone(kind){
     if(ctx.state==="suspended")ctx.resume().then(play).catch(()=>{});
     else play();
   }catch(e){}
+}
+
+
+/* v1.9.4: Yui workout voice guidance */
+const YUI_AUDIO={
+  ato10:"assets/audio/yui/ato_10byo.mp3",
+  ato5:"assets/audio/yui/ato_5byo.mp3",
+  last3:"assets/audio/yui/last_3byo.mp3",
+  next:"assets/audio/yui/tsugiiko.mp3",
+  otsukare:"assets/audio/yui/otsukare.mp3",
+  complete:"assets/audio/yui/training_kanryo.mp3"
+};
+const yuiVoiceCache={};
+function yuiPlayVoice(key,fallbackTone,onEnded){
+  try{
+    let a=yuiVoiceCache[key];
+    if(!a){a=new Audio(YUI_AUDIO[key]);a.preload="auto";yuiVoiceCache[key]=a;}
+    a.currentTime=0;
+    if(onEnded)a.onended=onEnded;
+    else a.onended=null;
+    const p=a.play();
+    if(p&&p.catch)p.catch(()=>{if(fallbackTone)yuiWorkoutTone(fallbackTone);});
+  }catch(e){if(fallbackTone)yuiWorkoutTone(fallbackTone);}
+}
+function yuiPrepareVoice(){
+  try{Object.keys(YUI_AUDIO).forEach(k=>{if(!yuiVoiceCache[k]){const a=new Audio(YUI_AUDIO[k]);a.preload="auto";yuiVoiceCache[k]=a;}});}
+  catch(e){}
+}
+function yuiCountdownCue(){
+  if(!workoutState.running || workoutState.left<=0)return;
+  workoutState.yuiVoiceCues=workoutState.yuiVoiceCues||{};
+  const l=workoutState.left;
+  if(l===10&&!workoutState.yuiVoiceCues.c10){workoutState.yuiVoiceCues.c10=true;yuiPlayVoice("ato10","exercise");}
+  if(l===5&&!workoutState.yuiVoiceCues.c5){workoutState.yuiVoiceCues.c5=true;yuiPlayVoice("ato5","exercise");}
+  if(l===3&&!workoutState.yuiVoiceCues.c3){workoutState.yuiVoiceCues.c3=true;yuiPlayVoice("last3","exercise");}
 }
 
 </script></div></body></html>
