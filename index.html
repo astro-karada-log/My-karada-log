@@ -704,6 +704,8 @@ function buildWorkoutPlan(){
   return expanded;
 }
 function startWorkoutFromPlan(){
+  yuiResetVoice595();
+  yuiPlayVoice595("start","exercise");
   yuiPrepareAudio();
   yuiPrepareVoice();
   workoutState.yuiVoiceCues={};
@@ -743,8 +745,7 @@ function updateWorkoutUI(){
   if(counter)counter.innerHTML=item.cooldown?'🧘 軽く整えて終了':dose.mode==='reps'?`目安：<b>${dose.value}回</b>　（${dose.min}〜${dose.max}回）`:`目安：<b>${dose.value}秒</b>`;
 }
 function advanceWorkout(){
-  /* v1.9.4: Yui says the next exercise is starting */
-  yuiPlayVoice("next","exercise");
+  /* v1.9.5: next cue is spoken 5 seconds before rest ends */
   clearInterval(workoutState.id);workoutState.id=null;const item=workoutState.items[workoutState.index];
   if(item.rest>0){
     let r=item.rest;workoutCurrent.textContent="☕ 休憩";const yui=document.getElementById('workoutYui');if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.relieved}`;workoutNum.textContent=formatTimer(r);workoutBar.style.width="0%";
@@ -755,11 +756,11 @@ function advanceWorkout(){
 function toggleWorkout(){
   if(workoutState.running){clearInterval(workoutState.id);workoutState.running=false;updateWorkoutUI();return}
   workoutState.running=true;updateWorkoutUI();
-  workoutState.id=setInterval(()=>{workoutState.left--;yuiCountdownCue();if(workoutState.left<=0)advanceWorkout();else updateWorkoutUI()},1000);
+  workoutState.id=setInterval(()=>{workoutState.left--;yuiCue595();if(workoutState.left<=0)advanceWorkout();else updateWorkoutUI()},1000);
 }
 function markWorkoutFinished(){
-  /* v1.9.4: Yui announces completion, then says おつかれ！ */
-  yuiPlayVoice("complete","all",()=>yuiPlayVoice("otsukare","all"));
+  /* v1.9.5: Yui announces completion, then says おつかれ！ */
+  yuiPlayVoice595("complete","all",()=>yuiPlayVoice595("otsukare","all"));
   clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutState.finished=true;
   updateWorkoutUI();
 }
@@ -828,7 +829,7 @@ render();
 autoBackup();setupChartCompare();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 
-/* v1.9.4: workout timer tones */
+/* v1.9.5: workout timer tones */
 function yuiPrepareAudio(){
   try{
     const AC=window.AudioContext||window.webkitAudioContext;
@@ -864,7 +865,7 @@ function yuiWorkoutTone(kind){
 }
 
 
-/* v1.9.4: Yui workout voice guidance */
+/* v1.9.5: Yui workout voice guidance */
 const YUI_AUDIO={
   ato10:"assets/audio/yui/ato_10byo.mp3",
   ato5:"assets/audio/yui/ato_5byo.mp3",
@@ -895,7 +896,48 @@ function yuiCountdownCue(){
   const l=workoutState.left;
   if(l===10&&!workoutState.yuiVoiceCues.c10){workoutState.yuiVoiceCues.c10=true;yuiPlayVoice("ato10","exercise");}
   if(l===5&&!workoutState.yuiVoiceCues.c5){workoutState.yuiVoiceCues.c5=true;yuiPlayVoice("ato5","exercise");}
-  if(l===3&&!workoutState.yuiVoiceCues.c3){workoutState.yuiVoiceCues.c3=true;yuiPlayVoice("last3","exercise");}
+}
+
+
+/* v1.9.5: voice-first workout guidance */
+function yuiPlayVoice595(key,fallbackTone,onEnded){
+  try{
+    const src={
+      start:"assets/audio/yui/hajimeruyo.mp3",
+      ato10:"assets/audio/yui/ato_10byo.mp3",
+      ato5:"assets/audio/yui/ato_5byo.mp3",
+      next:"assets/audio/yui/tsugiiko.mp3",
+      complete:"assets/audio/yui/training_kanryo.mp3",
+      otsukare:"assets/audio/yui/otsukare.mp3"
+    }[key];
+    if(!src)return;
+    const a=new Audio(src); a.preload="auto"; a.currentTime=0;
+    if(onEnded)a.onended=onEnded;
+    const p=a.play(); if(p&&p.catch)p.catch(()=>{if(fallbackTone)yuiWorkoutTone(fallbackTone);});
+  }catch(e){if(fallbackTone)yuiWorkoutTone(fallbackTone);}
+}
+function yuiResetVoice595(){
+  workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
+}
+function yuiCue595(){
+  if(!workoutState.running)return;
+  workoutState.yuiVoiceCues=workoutState.yuiVoiceCues||{};
+  const left=workoutState.left;
+  if(workoutState.isRest){
+    if(left===5&&!workoutState.yuiVoiceCues.rest5){
+      workoutState.yuiVoiceCues.rest5=true;
+      yuiPlayVoice595("next","exercise");
+    }
+  }else{
+    if(left===10&&!workoutState.yuiVoiceCues.c10){
+      workoutState.yuiVoiceCues.c10=true;
+      yuiPlayVoice595("ato10","exercise");
+    }
+    if(left===5&&!workoutState.yuiVoiceCues.c5){
+      workoutState.yuiVoiceCues.c5=true;
+      yuiPlayVoice595("ato5","exercise");
+    }
+  }
 }
 
 </script></div></body></html>
