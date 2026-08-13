@@ -22,7 +22,7 @@
 .three{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.three button{border:1px solid #dfe3e8;background:#fff;border-radius:10px;padding:10px 4px;font-weight:700}.three button.sel{border-color:var(--b);background:#edf4ff;color:var(--b)}
 .illus img{width:100%;height:100%;object-fit:cover;border-radius:13px}.exercise{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--l)}.exercise:last-child{border:0}.illus{height:58px;border-radius:13px;background:#eef6ff;display:flex;align-items:center;justify-content:center;font-size:32px}.exercise small{display:block;color:var(--m);font-size:11px;margin-top:3px}.exercise .time{font-size:12px;color:var(--m)}
 .banner{border-radius:13px;background:#f1f7ff;padding:12px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tabs{display:flex;gap:6px;overflow:auto;margin-bottom:10px}.tabs button{white-space:nowrap;border:1px solid #dfe3e8;background:#fff;border-radius:9px;padding:8px 10px}.tabs button.sel{background:#edf4ff;color:var(--b);border-color:var(--b)}
-.chart{height:190px;position:relative;border-left:1px solid #ccd2d9;border-bottom:1px solid #ccd2d9;margin:12px 8px 20px}.chart svg{width:100%;height:100%}.chart-label{font-size:10px;color:var(--m);display:flex;justify-content:space-between}
+.chart-wrap{position:relative;margin:12px 8px 8px}.chart{height:210px;position:relative;border-left:1px solid #ccd2d9;border-bottom:1px solid #ccd2d9;margin:0 0 0 34px}.chart svg{width:100%;height:100%;overflow:visible}.chart-y-label{position:absolute;left:0;top:0;bottom:0;width:30px;font-size:10px;color:var(--m);display:flex;flex-direction:column;justify-content:space-between;text-align:right;padding:1px 4px 0 0}.chart-x-labels{margin-left:34px;display:flex;justify-content:space-between;gap:4px;font-size:10px;color:var(--m);padding-top:5px;overflow:hidden}.chart-x-labels span{white-space:nowrap}.chart-label{font-size:11px;color:var(--m);display:flex;justify-content:flex-start;flex-wrap:wrap;gap:8px;margin:8px 0 0 34px}
 .nav{position:fixed;bottom:0;left:0;right:0;max-width:560px;margin:auto;background:#fff;border-top:1px solid var(--l);display:grid;grid-template-columns:repeat(4,1fr);padding:7px 3px calc(7px + env(safe-area-inset-bottom));z-index:10}.nav button{border:0;background:none;color:#808892;font-size:10px}.nav button.sel{color:var(--b);font-weight:750}.nav i{display:block;font-style:normal;font-size:20px;margin-bottom:2px}.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:#20242a;color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;display:none;z-index:20}
 
 .exercise-detail-modal{position:fixed;inset:0;background:rgba(10,18,30,.74);display:none;align-items:center;justify-content:center;z-index:55;padding:16px}.exercise-detail-modal.show{display:flex}.exercise-detail-box{width:min(520px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:24px;padding:18px}.exercise-detail-box img{width:100%;max-height:300px;object-fit:contain;border-radius:16px;background:#f6f8fa}.detail-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0}.detail-head h2{font-size:20px;margin:0}.detail-section{margin-top:12px;padding:12px;border-radius:13px;background:#f6f8fa}.detail-section strong{display:block;margin-bottom:5px}.detail-section ul{margin:6px 0 0 18px;padding:0;line-height:1.7;font-size:13px}.detail-close{border:0;background:#eef4ff;color:#2878e8;border-radius:10px;padding:9px 12px;font-weight:700}.exercise{cursor:pointer}.exercise:active{transform:scale(.99)}
@@ -44,12 +44,7 @@
 .history-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .history-tools label{font-size:12px;font-weight:700}
 .history-tools select{display:block;width:100%;margin-top:5px;padding:9px;border:1px solid #dfe5eb;border-radius:10px;background:#fff}
-.history-day{margin-bottom:12px}.history-day .day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.history-day .day-title{font-weight:800}.history-day .timing{font-size:12px;opacity:.65}
-.history-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.history-item{padding:9px 10px;border-radius:12px;background:#f6f8fa}
-.history-item .label{font-size:11px;opacity:.65}.history-item .value{font-size:16px;font-weight:750;margin-top:2px}
-@media(max-width:380px){.history-grid{grid-template-columns:1fr}.history-tools{grid-template-columns:1fr}}
+.history-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--l);border-radius:12px;background:#fff}.history-table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:12px}.history-table th,.history-table td{padding:9px 10px;border-right:1px solid #eef0f3;border-bottom:1px solid #eef0f3;text-align:right;white-space:nowrap}.history-table th{position:sticky;top:0;background:#f6f8fa;font-weight:800;color:#4f5862;z-index:2}.history-table th:first-child,.history-table td:first-child{position:sticky;left:0;background:#fff;text-align:left;z-index:3}.history-table th:first-child{background:#f6f8fa;z-index:4}.history-table tr:last-child td{border-bottom:0}.history-table th:last-child,.history-table td:last-child{border-right:0}.history-table .date{font-weight:750}.history-table .timing{font-size:10px;color:var(--m);margin-top:2px}.history-table .empty{color:#b3bac2}
 
 .history-link-card{margin-top:12px}.history-link-card .primary{width:100%;margin-top:10px}\n.measurement-inputs .field{display:flex;flex-direction:column;gap:5px}
 .measurement-inputs .field>span{font-size:12px;font-weight:700;opacity:.8}
@@ -106,7 +101,11 @@
   <div class="sub">表示する項目を選んでください。1つなら通常表示、2つ以上なら変化の傾向を重ねて比較します。</div>
   <div class="checks" id="chartChecks"></div>
   <div id="chartTitle" class="sub" style="margin-top:10px"></div>
-  <div id="chart" class="chart"></div>
+  <div class="chart-wrap">
+    <div id="chartYLabels" class="chart-y-label"></div>
+    <div id="chart" class="chart"></div>
+    <div id="chartXLabels" class="chart-x-labels"></div>
+  </div>
   <div id="chartLabels" class="chart-label"></div>
 </div>
 
@@ -330,54 +329,64 @@ function renderHistoryData(){
  if(period!=='all'){const days=Number(period),now=Date.now();rows=rows.filter(x=>{const d=new Date(historyDateValue(x));return !isNaN(d)&&now-d.getTime()<=days*86400000})}
  if(timing!=='all')rows=rows.filter(x=>historyTimingValue(x)===timing);
  if(!rows.length){root.innerHTML='<div class="card"><div class="sub">該当する測定データはありません。</div></div>';return}
- const keys=[['weight','体重'],['bmi','BMI'],['fat','体脂肪率'],['muscle','筋肉量'],['bone','推定骨量'],['visceral','内臓脂肪'],['basal','基礎代謝'],['age','体内年齢'],['waist','腹囲'],['condition','体調'],['fatigue','疲れ'],['pain','痛み'],['exercise','運動']];
- root.innerHTML=rows.map(x=>{
-  const d=historyDateValue(x),date=d?new Date(d).toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}):'日付不明';
-  const t=historyTimingValue(x)==='morning'?'🌅 朝':historyTimingValue(x)==='night'?'🌙 夜':historyTimingValue(x)||'';
-  const cells=keys.map(([k,l])=>{const v=historyDisplayValue(x,k);return v==='—'?'':`<div class="history-item"><div class="label">${l}</div><div class="value">${v}</div></div>`}).filter(Boolean).join('');
-  return `<div class="card history-day"><div class="day-head"><div class="day-title">${date}</div><div class="timing">${t}</div></div><div class="history-grid">${cells||'<div class="sub">記録された数値がありません。</div>'}</div></div>`;
+ const keys=[['weight','体重'],['bmi','BMI'],['fat','体脂肪率'],['muscle','筋肉量'],['bone','推定骨量'],['visceral','内臓脂肪'],['basal','基礎代謝'],['age','体内年齢'],['waist','腹囲'],['exercise','他の運動']];
+ const head=keys.map(([,label])=>`<th>${label}</th>`).join('');
+ const body=rows.map(x=>{
+   const d=historyDateValue(x),date=d?new Date(d).toLocaleDateString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit'}):'日付不明';
+   const rawTiming=historyTimingValue(x); const t=rawTiming==='morning'?'🌅 朝':rawTiming==='night'?'🌙 夜':rawTiming||'';
+   const cells=keys.map(([k])=>{const v=historyDisplayValue(x,k);return `<td class="${v==='—'?'empty':''}">${v}</td>`}).join('');
+   return `<tr><td class="date"><div>${date}</div><div class="timing">${t}</div></td>${cells}</tr>`;
  }).join('');
+ root.innerHTML=`<div class="card"><div class="sub" style="margin-bottom:8px">日付ごとの測定値を一覧で確認できます。項目が多い場合は横にスクロールできます。</div><div class="history-table-wrap"><table class="history-table"><thead><tr><th>日付</th>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`;
+}
+
+function chartDateLabel(x){
+ const d=historyDateValue(x); if(!d)return '';
+ const dt=new Date(d); if(isNaN(dt))return String(d).slice(5,10);
+ return `${dt.getMonth()+1}/${dt.getDate()}`;
+}
+function chartDateTime(x){const d=historyDateValue(x);const t=d?new Date(d).getTime():NaN;return Number.isFinite(t)?t:0}
+function setChartAxes(labels,yMin,yMax){
+ const yl=document.getElementById('chartYLabels'),xl=document.getElementById('chartXLabels');
+ if(yl)yl.innerHTML=`<span>${Number(yMax).toFixed(1)}</span><span>${Number(yMin).toFixed(1)}</span>`;
+ if(xl)xl.innerHTML=labels.map(x=>`<span>${x}</span>`).join('');
 }
 function charts(){
   const names=Object.fromEntries(chartFields);
   const selected=[...document.querySelectorAll('#chartChecks input:checked')].map(x=>x.value);
+  const resetAxes=()=>{setChartAxes([],0,0);document.getElementById('chartLabels').innerHTML=''};
 
   if(selected.length===0){
     chartTitle.textContent='表示する項目を選択してください';
     chart.innerHTML='<div class="sub" style="padding:15px">上の項目から1つ以上選ぶとグラフが表示されます。</div>';
-    chartLabels.innerHTML='';
-    renderHistory();
+    resetAxes();
     return;
   }
 
-  chartTitle.textContent=selected.length>=2 ? '選択項目の変化（各項目を0〜100に正規化）' : names[selected[0]];
+  const rows=data.history.slice().filter(x=>historyDateValue(x)).sort((a,b)=>chartDateTime(a)-chartDateTime(b));
+  chartTitle.textContent=selected.length>=2 ? '選択項目の変化（各項目を0〜100に正規化）' : `${names[selected[0]]}の推移`;
+  if(!rows.length){chart.innerHTML='<div class="sub" style="padding:15px">記録が増えるとグラフが表示されます。</div>';resetAxes();return;}
 
+  const dateLabels=rows.map(chartDateLabel);
   if(selected.length===1){
     const metric=selected[0];
-    let v=data.history.map(x=>chartValue(x,metric)).filter(Number.isFinite);
-    if(!v.length){
-      chart.innerHTML='<div class="sub" style="padding:15px">記録が増えるとグラフが表示されます。</div>';
-      chartLabels.innerHTML='';
-      renderHistory();
-      return;
-    }
-    let mn=Math.min(...v),mx=Math.max(...v);
-    if(mn===mx){mn-=1;mx+=1}
-    let pts=v.map((z,i)=>`${4+i/(Math.max(1,v.length-1))*92},${94-(z-mn)/(mx-mn)*84}`).join(' ');
+    const points=rows.map(x=>chartValue(x,metric));
+    const finite=points.filter(Number.isFinite);
+    if(!finite.length){chart.innerHTML='<div class="sub" style="padding:15px">選択した項目の記録がありません。</div>';resetAxes();return;}
+    let mn=Math.min(...finite),mx=Math.max(...finite); if(mn===mx){mn-=1;mx+=1}
+    const pts=points.map((z,i)=>{if(!Number.isFinite(z))return null;const x=4+i/(Math.max(1,points.length-1))*92;const y=94-(z-mn)/(mx-mn)*84;return `${x},${y}`}).filter(Boolean).join(' ');
     chart.innerHTML=`<svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="#2878e8" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>`;
-    chartLabels.innerHTML=`<span>${mn.toFixed(1)}</span><span>${mx.toFixed(1)}</span>`;
-    renderHistory();
+    setChartAxes(dateLabels,mn,mx);
+    chartLabels.innerHTML=`<span>${names[metric]}（実数値）</span>`;
     return;
   }
 
   const series=selected.map(k=>{
-    const vals=data.history.map(x=>chartValue(x,k));
+    const vals=rows.map(x=>chartValue(x,k));
     const finite=vals.filter(Number.isFinite);
-    const mn=finite.length?Math.min(...finite):0;
-    const mx=finite.length?Math.max(...finite):1;
-    return {k, vals, mn, mx};
+    const mn=finite.length?Math.min(...finite):0; const mx=finite.length?Math.max(...finite):1;
+    return {k,vals,mn,mx};
   });
-
   const colors=['#2878e8','#2aa876','#e09b25','#9b59b6','#d65a5a','#00a6a6','#777'];
   let svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none">';
   series.forEach((ser,si)=>{
@@ -389,10 +398,9 @@ function charts(){
     }).filter(Boolean).join(' ');
     if(pts)svg+=`<polyline points="${pts}" fill="none" stroke="${colors[si%colors.length]}" stroke-width="1.8" vector-effect="non-scaling-stroke"/>`;
   });
-  svg+='</svg>';
-  chart.innerHTML=svg;
-  chartLabels.innerHTML=series.map((ser,si)=>`<span style="margin-right:8px"><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colors[si%colors.length]}"></i> ${names[ser.k]}</span>`).join('');
-  renderHistory();
+  svg+='</svg>'; chart.innerHTML=svg;
+  setChartAxes(dateLabels,0,100);
+  chartLabels.innerHTML=series.map((ser,si)=>`<span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colors[si%colors.length]}"></i> ${names[ser.k]}</span>`).join('');
 }
 
 function makeBackupBlob(){
