@@ -720,8 +720,8 @@ async function startWorkoutFromPlan(){
   yuiResetVoice595();
   await yuiUnlockVoice595();
   yuiPlayVoice595("start");
-  yuiPrepareAudio();
-  yuiPrepareVoice();
+  // v1.10.1 voice-only diagnostic: do not start the timer yet.
+  alert("「はじめるよ〜」の音声テストです。音声が聞こえたらOKを押してください。");
   workoutState.yuiVoiceCues={};
   workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.running=false;workoutState.finished=false;clearInterval(workoutState.id);clearInterval(workoutState.idleId);
   workoutState.left=workoutState.items[0]?.sec||0;hideWorkoutInterrupt();updateWorkoutUI();workoutModal.classList.add("show");requestWorkoutWakeLock();
@@ -824,7 +824,7 @@ function toggleWorkout(){
   startWorkoutTimer595();
 }
 function markWorkoutFinished(){
-  /* v1.10.0: Yui announces completion, then says おつかれ！ */
+  /* v1.10.1: Yui announces completion, then says おつかれ！ */
   yuiPlayVoice595("complete"); setTimeout(()=>yuiPlayVoice595("otsukare"),900);
   clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutState.finished=true;
   updateWorkoutUI();
@@ -894,7 +894,7 @@ render();
 autoBackup();setupChartCompare();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 
-/* v1.10.0: workout timer tones */
+/* v1.10.1: workout timer tones */
 function yuiPrepareAudio(){
   try{
     const AC=window.AudioContext||window.webkitAudioContext;
@@ -930,7 +930,7 @@ function yuiWorkoutTone(kind){
 }
 
 
-/* v1.10.0: Yui workout voice guidance */
+/* v1.10.1: Yui workout voice guidance */
 const YUI_AUDIO={
   ato10:"assets/audio/yui/ato_10byo.mp3",
   ato5:"assets/audio/yui/ato_5byo.mp3",
@@ -964,7 +964,7 @@ function yuiCountdownCue(){
 }
 
 
-/* v1.10.0: Web Audio voice playback for iOS/PWA */
+/* v1.10.1: Web Audio voice playback for iOS/PWA */
 const yuiVoice595Src={start:"assets/audio/yui/hajimeruyo.mp3",ato10:"assets/audio/yui/ato_10byo.mp3",ato5:"assets/audio/yui/ato_5byo.mp3",next:"assets/audio/yui/tsugiiko.mp3",complete:"assets/audio/yui/training_kanryo.mp3",otsukare:"assets/audio/yui/otsukare.mp3"};
 let yuiVoiceCtx595=null;
 const yuiVoiceBuffers595={};
@@ -1025,7 +1025,7 @@ function startWorkoutTimer595(){
   workoutState.id=setInterval(()=>{workoutState.left--;yuiCue595();if(workoutState.left<=0)advanceWorkout();else updateWorkoutUI();},1000);
 }
 
-/* v1.10.0: local automatic backup manager (28 days) */
+/* v1.10.1: local automatic backup manager (28 days) */
 const AUTO_BACKUP_KEY_196 = "karadaLog_autoBackups_v196";
 const AUTO_BACKUP_MAX_196 = 28;
 
