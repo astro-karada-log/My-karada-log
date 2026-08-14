@@ -718,7 +718,8 @@ function buildWorkoutPlan(){
 }
 function startWorkoutFromPlan(){
   yuiResetVoice595();
-  yuiPlayVoice595("start","exercise");
+  yuiUnlockVoice595();
+  yuiPlayVoice595("start");
   yuiPrepareAudio();
   yuiPrepareVoice();
   workoutState.yuiVoiceCues={};
@@ -758,22 +759,73 @@ function updateWorkoutUI(){
   if(counter)counter.innerHTML=item.cooldown?'🧘 軽く整えて終了':dose.mode==='reps'?`目安：<b>${dose.value}回</b>　（${dose.min}〜${dose.max}回）`:`目安：<b>${dose.value}秒</b>`;
 }
 function advanceWorkout(){
-  /* v1.9.7: next cue is spoken 5 seconds before rest ends */
-  clearInterval(workoutState.id);workoutState.id=null;const item=workoutState.items[workoutState.index];
+  clearInterval(workoutState.id);
+  workoutState.id=null;
+  const item=workoutState.items[workoutState.index];
+
   if(item.rest>0){
-    let r=item.rest;workoutCurrent.textContent="☕ 休憩";const yui=document.getElementById('workoutYui');if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.relieved}`;workoutNum.textContent=formatTimer(r);workoutBar.style.width="0%";
-    const counter=document.getElementById('workoutCounter');if(counter)counter.textContent=`次の種目まで ${r}秒`;
-    workoutState.id=setInterval(()=>{r--;workoutNum.textContent=formatTimer(r);if(r<=0){clearInterval(workoutState.id);workoutState.id=null;workoutState.index++;if(workoutState.index>=workoutState.items.length){markWorkoutFinished();return}workoutState.left=workoutState.items[workoutState.index].sec;workoutState.yuiVoiceCues={};workoutState.running=true;updateWorkoutUI();}},1000);
-  }else{workoutState.index++;if(workoutState.index>=workoutState.items.length){markWorkoutFinished();return}workoutState.left=workoutState.items[workoutState.index].sec;workoutState.yuiVoiceCues={};updateWorkoutUI()}
+    let r=item.rest;
+    workoutState.isRest=true;
+    workoutState.running=true;
+    workoutState.left=r;
+    workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
+    workoutCurrent.textContent="☕ 休憩";
+    const yui=document.getElementById('workoutYui');
+    if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.relieved}`;
+    workoutNum.textContent=formatTimer(r);
+    workoutBar.style.width="0%";
+    const counter=document.getElementById('workoutCounter');
+    if(counter)counter.textContent=`次の種目まで ${r}秒`;
+
+    workoutState.id=setInterval(()=>{
+      r--;
+      workoutState.left=r;
+      workoutNum.textContent=formatTimer(r);
+      if(r===5&&!workoutState.yuiVoiceCues.rest5){
+        workoutState.yuiVoiceCues.rest5=true;
+        yuiPlayVoice595("next");
+      }
+      if(r<=0){
+        clearInterval(workoutState.id);
+        workoutState.id=null;
+        workoutState.index++;
+        if(workoutState.index>=workoutState.items.length){
+          markWorkoutFinished();
+          return;
+        }
+        workoutState.left=workoutState.items[workoutState.index].sec;
+        workoutState.isRest=false;
+        workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
+        yuiPlayVoice595("start");
+        startWorkoutTimer595();
+      }
+    },1000);
+  }else{
+    workoutState.index++;
+    if(workoutState.index>=workoutState.items.length){
+      markWorkoutFinished();
+      return;
+    }
+    workoutState.left=workoutState.items[workoutState.index].sec;
+    workoutState.isRest=false;
+    workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
+    yuiPlayVoice595("start");
+    startWorkoutTimer595();
+  }
 }
 function toggleWorkout(){
-  if(workoutState.running){clearInterval(workoutState.id);workoutState.running=false;updateWorkoutUI();return}
-  workoutState.running=true;updateWorkoutUI();
-  workoutState.id=setInterval(()=>{workoutState.left--;yuiCue595();if(workoutState.left<=0)advanceWorkout();else updateWorkoutUI()},1000);
+  if(workoutState.running){
+    clearInterval(workoutState.id);
+    workoutState.id=null;
+    workoutState.running=false;
+    updateWorkoutUI();
+    return;
+  }
+  startWorkoutTimer595();
 }
 function markWorkoutFinished(){
-  /* v1.9.7: Yui announces completion, then says おつかれ！ */
-  yuiPlayVoice595("complete","all",()=>yuiPlayVoice595("otsukare","all"));
+  /* v1.9.8: Yui announces completion, then says おつかれ！ */
+  yuiPlayVoice595("complete"); setTimeout(()=>yuiPlayVoice595("otsukare"),900);
   clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutState.finished=true;
   updateWorkoutUI();
 }
@@ -842,7 +894,7 @@ render();
 autoBackup();setupChartCompare();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 
-/* v1.9.7: workout timer tones */
+/* v1.9.8: workout timer tones */
 function yuiPrepareAudio(){
   try{
     const AC=window.AudioContext||window.webkitAudioContext;
@@ -878,7 +930,7 @@ function yuiWorkoutTone(kind){
 }
 
 
-/* v1.9.7: Yui workout voice guidance */
+/* v1.9.8: Yui workout voice guidance */
 const YUI_AUDIO={
   ato10:"assets/audio/yui/ato_10byo.mp3",
   ato5:"assets/audio/yui/ato_5byo.mp3",
@@ -912,22 +964,48 @@ function yuiCountdownCue(){
 }
 
 
-/* v1.9.7: voice-first workout guidance */
-function yuiPlayVoice595(key,fallbackTone,onEnded){
+/* v1.9.8: iOS-safe voice playback */
+const yuiVoice595Src={
+  start:"assets/audio/yui/hajimeruyo.mp3",
+  ato10:"assets/audio/yui/ato_10byo.mp3",
+  ato5:"assets/audio/yui/ato_5byo.mp3",
+  next:"assets/audio/yui/tsugiiko.mp3",
+  complete:"assets/audio/yui/training_kanryo.mp3",
+  otsukare:"assets/audio/yui/otsukare.mp3"
+};
+let yuiVoiceAudio595=null;
+function yuiPrepareVoice595(){
+  if(!yuiVoiceAudio595){
+    yuiVoiceAudio595=new Audio();
+    yuiVoiceAudio595.preload="auto";
+    yuiVoiceAudio595.playsInline=true;
+  }
+}
+function yuiUnlockVoice595(){
+  yuiPrepareVoice595();
   try{
-    const src={
-      start:"assets/audio/yui/hajimeruyo.mp3",
-      ato10:"assets/audio/yui/ato_10byo.mp3",
-      ato5:"assets/audio/yui/ato_5byo.mp3",
-      next:"assets/audio/yui/tsugiiko.mp3",
-      complete:"assets/audio/yui/training_kanryo.mp3",
-      otsukare:"assets/audio/yui/otsukare.mp3"
-    }[key];
-    if(!src)return;
-    const a=new Audio(src); a.preload="auto"; a.currentTime=0;
-    if(onEnded)a.onended=onEnded;
-    const p=a.play(); if(p&&p.catch)p.catch(()=>{if(fallbackTone)yuiWorkoutTone(fallbackTone);});
-  }catch(e){if(fallbackTone)yuiWorkoutTone(fallbackTone);}
+    yuiVoiceAudio595.src=yuiVoice595Src.start;
+    yuiVoiceAudio595.volume=0;
+    const p=yuiVoiceAudio595.play();
+    if(p&&p.then)p.then(()=>{
+      yuiVoiceAudio595.pause();
+      yuiVoiceAudio595.currentTime=0;
+      yuiVoiceAudio595.volume=1;
+    }).catch(()=>{yuiVoiceAudio595.volume=1;});
+  }catch(e){}
+}
+function yuiPlayVoice595(key){
+  yuiPrepareVoice595();
+  const src=yuiVoice595Src[key];
+  if(!src)return;
+  try{
+    yuiVoiceAudio595.onended=null;
+    yuiVoiceAudio595.src=src;
+    yuiVoiceAudio595.currentTime=0;
+    yuiVoiceAudio595.volume=1;
+    const p=yuiVoiceAudio595.play();
+    if(p&&p.catch)p.catch(()=>{});
+  }catch(e){}
 }
 function yuiResetVoice595(){
   workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
@@ -939,22 +1017,32 @@ function yuiCue595(){
   if(workoutState.isRest){
     if(left===5&&!workoutState.yuiVoiceCues.rest5){
       workoutState.yuiVoiceCues.rest5=true;
-      yuiPlayVoice595("next","exercise");
+      yuiPlayVoice595("next");
     }
   }else{
     if(left===10&&!workoutState.yuiVoiceCues.c10){
       workoutState.yuiVoiceCues.c10=true;
-      yuiPlayVoice595("ato10","exercise");
+      yuiPlayVoice595("ato10");
     }
     if(left===5&&!workoutState.yuiVoiceCues.c5){
       workoutState.yuiVoiceCues.c5=true;
-      yuiPlayVoice595("ato5","exercise");
+      yuiPlayVoice595("ato5");
     }
   }
 }
+function startWorkoutTimer595(){
+  clearInterval(workoutState.id);
+  workoutState.running=true;
+  updateWorkoutUI();
+  workoutState.id=setInterval(()=>{
+    workoutState.left--;
+    yuiCue595();
+    if(workoutState.left<=0)advanceWorkout();
+    else updateWorkoutUI();
+  },1000);
+}
 
-
-/* v1.9.7: local automatic backup manager (28 days) */
+/* v1.9.8: local automatic backup manager (28 days) */
 const AUTO_BACKUP_KEY_196 = "karadaLog_autoBackups_v196";
 const AUTO_BACKUP_MAX_196 = 28;
 
