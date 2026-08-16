@@ -969,18 +969,20 @@ function yuiCountdownCue(){
 
 
 
-<style id="yuiVoiceDiagStyle">
-#yuiVoiceDiag595{display:none;margin:12px 0;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;background:#fafafa}
-#yuiVoiceDiag595.show{display:block}
-</style>
-<div id="yuiVoiceDiag595" aria-live="polite"></div>
-<script>
 function yuiDiag595(msg){
-  const el=document.getElementById("yuiVoiceDiag595");
-  if(el){el.classList.add("show");el.textContent=String(msg);}
+  let el=document.getElementById("yuiVoiceDiag595");
+  if(!el){
+    el=document.createElement("div");
+    el.id="yuiVoiceDiag595";
+    el.style.cssText="display:none;margin:12px 0;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;background:#fafafa;";
+    const anchor=document.querySelector(".workout-actions");
+    if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(el,anchor);
+    else document.body.appendChild(el);
+  }
+  el.style.display="block";
+  el.textContent=String(msg);
   console.log("[YUI VOICE DIAG]",msg);
 }
-</script>
 /* v1.10.2: iOS/PWA voice playback - user-gesture safe */
 const yuiVoice595Src={
   start:"assets/audio/yui/hajimeruyo.mp3",
