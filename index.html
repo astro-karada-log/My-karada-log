@@ -716,12 +716,15 @@ function buildWorkoutPlan(){
   });
   return expanded;
 }
-async function startWorkoutFromPlan(){
+function startWorkoutFromPlan(){
   yuiResetVoice595();
-  await yuiUnlockVoice595();
+
+  // IMPORTANT: resume AudioContext synchronously from the button gesture.
+  // Do not await network/decode work before this call.
+  yuiUnlockVoice595();
+  yuiPrepareVoice595();
   yuiPlayVoice595("start");
-  // v1.10.1 voice-only diagnostic: do not start the timer yet.
-  alert("「はじめるよ〜」の音声テストです。音声が聞こえたらOKを押してください。");
+
   workoutState.yuiVoiceCues={};
   workoutState.items=buildWorkoutPlan();workoutState.index=0;workoutState.running=false;workoutState.finished=false;clearInterval(workoutState.id);clearInterval(workoutState.idleId);
   workoutState.left=workoutState.items[0]?.sec||0;hideWorkoutInterrupt();updateWorkoutUI();workoutModal.classList.add("show");requestWorkoutWakeLock();
@@ -964,65 +967,150 @@ function yuiCountdownCue(){
 }
 
 
-/* v1.10.1: Web Audio voice playback for iOS/PWA */
-const yuiVoice595Src={start:"assets/audio/yui/hajimeruyo.mp3",ato10:"assets/audio/yui/ato_10byo.mp3",ato5:"assets/audio/yui/ato_5byo.mp3",next:"assets/audio/yui/tsugiiko.mp3",complete:"assets/audio/yui/training_kanryo.mp3",otsukare:"assets/audio/yui/otsukare.mp3"};
+/* v1.10.2: iOS/PWA voice playback - user-gesture safe */
+const yuiVoice595Src={
+  start:"assets/audio/yui/hajimeruyo.mp3",
+  ato10:"assets/audio/yui/ato_10byo.mp3",
+  ato5:"assets/audio/yui/ato_5byo.mp3",
+  next:"assets/audio/yui/tsugiiko.mp3",
+  complete:"assets/audio/yui/training_kanryo.mp3",
+  otsukare:"assets/audio/yui/otsukare.mp3"
+};
 let yuiVoiceCtx595=null;
 const yuiVoiceBuffers595={};
-let yuiVoiceLoad595=null;
+const yuiVoiceLoad595={};
 
-function yuiPrepareVoice595(){
-  if(yuiVoiceLoad595)return yuiVoiceLoad595;
-  yuiVoiceLoad595=(async()=>{
-    try{
-      const Ctx=window.AudioContext||window.webkitAudioContext;
-      if(!Ctx)return;
-      if(!yuiVoiceCtx595)yuiVoiceCtx595=new Ctx();
-      await Promise.all(Object.entries(yuiVoice595Src).map(async([key,src])=>{
-        try{
-          const res=await fetch(src,{cache:"force-cache"});
-          const buf=await res.arrayBuffer();
-          yuiVoiceBuffers595[key]=await yuiVoiceCtx595.decodeAudioData(buf);
-        }catch(e){console.warn("Yui voice load failed:",key,e);}
-      }));
-    }catch(e){console.warn("Yui voice init failed:",e);}
-  })();
-  return yuiVoiceLoad595;
+function yuiGetAudioContext595(){
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx)return null;
+    if(!yuiVoiceCtx595)yuiVoiceCtx595=new Ctx();
+    return yuiVoiceCtx595;
+  }catch(e){
+    console.warn("Yui AudioContext init failed:",e);
+    return null;
+  }
 }
 
-async function yuiUnlockVoice595(){
-  await yuiPrepareVoice595();
+/* Called directly from a user gesture. Do not await before this resume(). */
+function yuiUnlockVoice595(){
+  const ctx=yuiGetAudioContext595();
+  if(!ctx)return Promise.resolve(null);
   try{
-    if(yuiVoiceCtx595&&yuiVoiceCtx595.state!=="running")await yuiVoiceCtx595.resume();
-  }catch(e){console.warn("Yui voice unlock failed:",e);}
+    const p=ctx.resume();
+    return p&&p.then?p:Promise.resolve(ctx);
+  }catch(e){
+    console.warn("Yui voice unlock failed:",e);
+    return Promise.resolve(ctx);
+  }
+}
+
+async function yuiLoadVoice595(key){
+  if(yuiVoiceBuffers595[key])return yuiVoiceBuffers595[key];
+  if(yuiVoiceLoad595[key])return yuiVoiceLoad595[key];
+
+  const ctx=yuiGetAudioContext595();
+  if(!ctx)return null;
+
+  const src=yuiVoice595Src[key];
+  if(!src)return null;
+
+  yuiVoiceLoad595[key]=(async()=>{
+    try{
+      const res=await fetch(src,{cache:"no-store"});
+      if(!res.ok)throw new Error(`HTTP ${res.status}: ${src}`);
+      const buf=await res.arrayBuffer();
+      const decoded=await ctx.decodeAudioData(buf);
+      yuiVoiceBuffers595[key]=decoded;
+      return decoded;
+    }catch(e){
+      console.warn("Yui voice load failed:",key,e);
+      delete yuiVoiceLoad595[key];
+      return null;
+    }
+  })();
+
+  return yuiVoiceLoad595[key];
+}
+
+/* Preload after the user gesture; playback itself is not blocked by this fetch. */
+function yuiPrepareVoice595(){
+  Object.keys(yuiVoice595Src).forEach(key=>{
+    yuiLoadVoice595(key).catch(()=>{});
+  });
 }
 
 function yuiPlayVoice595(key){
-  const ctx=yuiVoiceCtx595,buffer=yuiVoiceBuffers595[key];
-  if(!ctx||!buffer)return;
-  try{
-    if(ctx.state!=="running")ctx.resume().catch(()=>{});
-    const source=ctx.createBufferSource();
-    source.buffer=buffer;
-    source.connect(ctx.destination);
-    source.start(0);
-  }catch(e){}
+  const ctx=yuiGetAudioContext595();
+  if(!ctx){
+    console.warn("Yui voice: AudioContext unavailable",key);
+    return;
+  }
+
+  const play=buffer=>{
+    if(!buffer){
+      console.warn("Yui voice: buffer unavailable",key);
+      return;
+    }
+    try{
+      if(ctx.state!=="running"){
+        const rp=ctx.resume();
+        if(rp&&rp.catch)rp.catch(e=>console.warn("Yui resume failed:",e));
+      }
+      const source=ctx.createBufferSource();
+      source.buffer=buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    }catch(e){
+      console.warn("Yui voice playback failed:",key,e);
+    }
+  };
+
+  if(yuiVoiceBuffers595[key]){
+    play(yuiVoiceBuffers595[key]);
+  }else{
+    yuiLoadVoice595(key).then(play).catch(e=>{
+      console.warn("Yui voice deferred playback failed:",key,e);
+    });
+  }
 }
 
-function yuiResetVoice595(){workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};}
+function yuiResetVoice595(){
+  workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
+}
+
 function yuiCue595(){
   if(!workoutState.running)return;
   workoutState.yuiVoiceCues=workoutState.yuiVoiceCues||{};
   const left=workoutState.left;
+
   if(workoutState.isRest){
-    if(left===5&&!workoutState.yuiVoiceCues.rest5){workoutState.yuiVoiceCues.rest5=true;yuiPlayVoice595("next");}
+    if(left===5&&!workoutState.yuiVoiceCues.rest5){
+      workoutState.yuiVoiceCues.rest5=true;
+      yuiPlayVoice595("next");
+    }
   }else{
-    if(left===10&&!workoutState.yuiVoiceCues.c10){workoutState.yuiVoiceCues.c10=true;yuiPlayVoice595("ato10");}
-    if(left===5&&!workoutState.yuiVoiceCues.c5){workoutState.yuiVoiceCues.c5=true;yuiPlayVoice595("ato5");}
+    if(left===10&&!workoutState.yuiVoiceCues.c10){
+      workoutState.yuiVoiceCues.c10=true;
+      yuiPlayVoice595("ato10");
+    }
+    if(left===5&&!workoutState.yuiVoiceCues.c5){
+      workoutState.yuiVoiceCues.c5=true;
+      yuiPlayVoice595("ato5");
+    }
   }
 }
+
 function startWorkoutTimer595(){
-  clearInterval(workoutState.id);workoutState.running=true;updateWorkoutUI();
-  workoutState.id=setInterval(()=>{workoutState.left--;yuiCue595();if(workoutState.left<=0)advanceWorkout();else updateWorkoutUI();},1000);
+  clearInterval(workoutState.id);
+  workoutState.running=true;
+  updateWorkoutUI();
+  workoutState.id=setInterval(()=>{
+    workoutState.left--;
+    yuiCue595();
+    if(workoutState.left<=0)advanceWorkout();
+    else updateWorkoutUI();
+  },1000);
 }
 
 /* v1.10.1: local automatic backup manager (28 days) */
