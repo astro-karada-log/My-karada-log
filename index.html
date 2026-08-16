@@ -974,7 +974,7 @@ function yuiDiag595(msg){
   if(!el){
     el=document.createElement("div");
     el.id="yuiVoiceDiag595";
-    el.style.cssText="display:none;margin:12px 0;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;background:#fafafa;";
+    el.style.cssText="display:none;margin:12px 0;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;background:#fafafa";
     const anchor=document.querySelector(".workout-actions");
     if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(el,anchor);
     else document.body.appendChild(el);
@@ -1042,7 +1042,7 @@ async function yuiLoadVoice595(key){
     }catch(e){
       console.warn("Yui voice load failed:",key,e);
       delete yuiVoiceLoad595[key];
-      return null;
+      throw e;
     }
   })();
 
@@ -1090,16 +1090,21 @@ function yuiPlayVoice595(key){
   });
 }
 
-function yuiVoiceDiagnostic595(){
+async function yuiVoiceDiagnostic595(){
   yuiDiag595("診断開始\n① AudioContextをユーザー操作で起動します");
-  yuiUnlockVoice595();
-  setTimeout(()=>{
-    const ctx=yuiGetAudioContext595();
-    yuiDiag595("AudioContext state: "+(ctx?ctx.state:"なし")+
-      "\nURL: "+yuiVoice595Src.start+
-      "\n② 「はじめるよ〜」を取得・decodeします");
-    yuiPlayVoice595("start");
-  },80);
+  try{
+    await yuiUnlockVoice595();
+  }catch(e){
+    yuiDiag595("❌ AudioContextの起動に失敗\\n"+e.name+": "+e.message);
+    return;
+  }
+
+  const ctx=yuiGetAudioContext595();
+  yuiDiag595("AudioContext state: "+(ctx?ctx.state:"なし")+
+    "\nURL: "+yuiVoice595Src.start+
+    "\n② 「はじめるよ〜」を取得・decodeします");
+
+  yuiPlayVoice595("start");
 }
 
 function yuiResetVoice595(){
