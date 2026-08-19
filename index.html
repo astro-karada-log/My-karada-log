@@ -209,7 +209,6 @@
     <div class="workout-next" id="workoutNext"></div>
     <div class="workout-actions">
       <button class="btn" id="workoutStartBtn" onclick="toggleWorkout()">▶ 開始</button>
-      <button class="btn secondary" type="button" onclick="yuiVoiceDiagnostic595()">🔊 音声診断</button>
       <button class="btn secondary" onclick="resetWorkout()">↺ リセット</button>
     </div>
     <div class="workout-actions" style="margin-top:8px">
@@ -969,21 +968,7 @@ function yuiCountdownCue(){
 
 
 
-function yuiDiag595(msg){
-  let el=document.getElementById("yuiVoiceDiag595");
-  if(!el){
-    el=document.createElement("div");
-    el.id="yuiVoiceDiag595";
-    el.style.cssText="display:none;margin:12px 0;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;background:#fafafa";
-    const anchor=document.querySelector(".workout-actions");
-    if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(el,anchor);
-    else document.body.appendChild(el);
-  }
-  el.style.display="block";
-  el.textContent=String(msg);
-  console.log("[YUI VOICE DIAG]",msg);
-}
-/* v1.10.2: iOS/PWA voice playback - user-gesture safe */
+/* v1.10.2: iOS/PWA voice playback */
 const yuiVoice595Src={
   start:"assets/audio/yui/hajimeruyo.mp3",
   ato10:"assets/audio/yui/ato_10byo.mp3",
@@ -1008,7 +993,6 @@ function yuiGetAudioContext595(){
   }
 }
 
-/* Called directly from a user gesture. Do not await before this resume(). */
 function yuiUnlockVoice595(){
   const ctx=yuiGetAudioContext595();
   if(!ctx)return Promise.resolve(null);
@@ -1024,10 +1008,8 @@ function yuiUnlockVoice595(){
 async function yuiLoadVoice595(key){
   if(yuiVoiceBuffers595[key])return yuiVoiceBuffers595[key];
   if(yuiVoiceLoad595[key])return yuiVoiceLoad595[key];
-
   const ctx=yuiGetAudioContext595();
   if(!ctx)return null;
-
   const src=yuiVoice595Src[key];
   if(!src)return null;
 
@@ -1045,11 +1027,9 @@ async function yuiLoadVoice595(key){
       throw e;
     }
   })();
-
   return yuiVoiceLoad595[key];
 }
 
-/* Preload after the user gesture; playback itself is not blocked by this fetch. */
 function yuiPrepareVoice595(){
   Object.keys(yuiVoice595Src).forEach(key=>{
     yuiLoadVoice595(key).catch(()=>{});
@@ -1057,54 +1037,29 @@ function yuiPrepareVoice595(){
 }
 
 function yuiPlayVoice595(key){
-  yuiDiag595("① 再生開始: "+key);
   const ctx=yuiGetAudioContext595();
-  if(!ctx){yuiDiag595("❌ AudioContextを作成できませんでした");return;}
-  yuiDiag595("② AudioContext: "+ctx.state);
+  if(!ctx)return;
 
   const play=buffer=>{
-    if(!buffer){yuiDiag595("❌ decode後の音声データがありません");return;}
-    yuiDiag595("③ decode成功\nduration: "+buffer.duration.toFixed(3)+"秒\nsampleRate: "+buffer.sampleRate);
+    if(!buffer)return;
     try{
       const source=ctx.createBufferSource();
       source.buffer=buffer;
       source.connect(ctx.destination);
       source.start(0);
-      yuiDiag595("④ source.start() 実行済み\nAudioContext: "+ctx.state);
     }catch(e){
-      yuiDiag595("❌ source.start() 失敗\n"+e.name+": "+e.message);
-      console.error(e);
+      console.error("Yui voice playback failed:",e);
     }
   };
 
-  if(yuiVoiceBuffers595[key]){play(yuiVoiceBuffers595[key]);return;}
-
-  const src=yuiVoice595Src[key];
-  yuiDiag595("③ MP3取得中:\n"+src);
-  yuiLoadVoice595(key).then(buffer=>{
-    yuiDiag595("③ MP3取得/decode完了\nURL: "+src+"\nHTTP取得とdecodeAudioDataは成功");
-    play(buffer);
-  }).catch(e=>{
-    yuiDiag595("❌ MP3取得/decode失敗\n"+src+"\n"+e.name+": "+e.message);
-    console.error(e);
-  });
-}
-
-async function yuiVoiceDiagnostic595(){
-  yuiDiag595("診断開始\n① AudioContextをユーザー操作で起動します");
-  try{
-    await yuiUnlockVoice595();
-  }catch(e){
-    yuiDiag595("❌ AudioContextの起動に失敗\\n"+e.name+": "+e.message);
+  if(yuiVoiceBuffers595[key]){
+    play(yuiVoiceBuffers595[key]);
     return;
   }
 
-  const ctx=yuiGetAudioContext595();
-  yuiDiag595("AudioContext state: "+(ctx?ctx.state:"なし")+
-    "\nURL: "+yuiVoice595Src.start+
-    "\n② 「はじめるよ〜」を取得・decodeします");
-
-  yuiPlayVoice595("start");
+  yuiLoadVoice595(key).then(play).catch(e=>{
+    console.warn("Yui voice playback load failed:",key,e);
+  });
 }
 
 function yuiResetVoice595(){
@@ -1121,15 +1076,15 @@ function yuiCue595(){
       workoutState.yuiVoiceCues.rest5=true;
       yuiPlayVoice595("next");
     }
-  }else{
-    if(left===10&&!workoutState.yuiVoiceCues.c10){
-      workoutState.yuiVoiceCues.c10=true;
-      yuiPlayVoice595("ato10");
-    }
-    if(left===5&&!workoutState.yuiVoiceCues.c5){
-      workoutState.yuiVoiceCues.c5=true;
-      yuiPlayVoice595("ato5");
-    }
+    return;
+  }
+  if(left===10&&!workoutState.yuiVoiceCues.c10){
+    workoutState.yuiVoiceCues.c10=true;
+    yuiPlayVoice595("ato10");
+  }
+  if(left===5&&!workoutState.yuiVoiceCues.c5){
+    workoutState.yuiVoiceCues.c5=true;
+    yuiPlayVoice595("ato5");
   }
 }
 
