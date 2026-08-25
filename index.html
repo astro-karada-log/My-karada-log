@@ -771,7 +771,8 @@ function advanceWorkout(){
     workoutState.isRest=true;
     workoutState.running=true;
     workoutState.left=r;
-    workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
+    workoutState.yuiVoiceCues={c10:false};
+    yuiPlayRestVoice595();
     workoutCurrent.textContent="☕ 休憩";
     const yui=document.getElementById('workoutYui');
     if(yui)yui.src=`assets/yui/${YUI_FACE_FILES.relieved}`;
@@ -784,10 +785,6 @@ function advanceWorkout(){
       r--;
       workoutState.left=r;
       workoutNum.textContent=formatTimer(r);
-      if(r===5&&!workoutState.yuiVoiceCues.rest5){
-        workoutState.yuiVoiceCues.rest5=true;
-        yuiPlayVoice595("next");
-      }
       if(r<=0){
         clearInterval(workoutState.id);
         workoutState.id=null;
@@ -798,7 +795,7 @@ function advanceWorkout(){
         }
         workoutState.left=workoutState.items[workoutState.index].sec;
         workoutState.isRest=false;
-        workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
+        workoutState.yuiVoiceCues={c10:false};
         yuiPlayVoice595("start");
         startWorkoutTimer595();
       }
@@ -811,8 +808,8 @@ function advanceWorkout(){
     }
     workoutState.left=workoutState.items[workoutState.index].sec;
     workoutState.isRest=false;
-    workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
-    yuiPlayVoice595("start");
+    workoutState.yuiVoiceCues={c10:false};
+    yuiPlayVoice595("next");
     startWorkoutTimer595();
   }
 }
@@ -827,8 +824,8 @@ function toggleWorkout(){
   startWorkoutTimer595();
 }
 function markWorkoutFinished(){
-  /* v1.10.1: Yui announces completion, then says おつかれ！ */
-  yuiPlayVoice595("complete"); setTimeout(()=>yuiPlayVoice595("otsukare"),900);
+  /* v1.10.6: wait for 「トレーニング完了」 to finish before 「おつかれ〜」. */
+  yuiPlayVoice595("complete",()=>yuiPlayVoice595("otsukare"));
   clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutState.finished=true;
   updateWorkoutUI();
 }
@@ -870,7 +867,11 @@ function hideWorkoutInterrupt(){
 }
 function resumeWorkout(){
   hideWorkoutInterrupt();
-  workoutState.running=false;updateWorkoutUI();toggleWorkout();
+  // Re-unlock AudioContext from the user's tap before resuming the timer.
+  yuiUnlockVoice595();
+  workoutState.running=false;
+  updateWorkoutUI();
+  startWorkoutTimer595();
 }
 function stopWorkoutHere(){
   hideWorkoutInterrupt();
@@ -933,47 +934,13 @@ function yuiWorkoutTone(kind){
 }
 
 
-/* v1.10.1: Yui workout voice guidance */
-const YUI_AUDIO={
-  ato10:"assets/audio/yui/ato_10byo.mp3",
-  ato5:"assets/audio/yui/ato_5byo.mp3",
-  last3:"assets/audio/yui/last_3byo.mp3",
-  next:"assets/audio/yui/tsugiiko.mp3",
-  otsukare:"assets/audio/yui/otsukare.mp3",
-  complete:"assets/audio/yui/training_kanryo.mp3"
-};
-const yuiVoiceCache={};
-function yuiPlayVoice(key,fallbackTone,onEnded){
-  try{
-    let a=yuiVoiceCache[key];
-    if(!a){a=new Audio(YUI_AUDIO[key]);a.preload="auto";yuiVoiceCache[key]=a;}
-    a.currentTime=0;
-    if(onEnded)a.onended=onEnded;
-    else a.onended=null;
-    const p=a.play();
-    if(p&&p.catch)p.catch(()=>{if(fallbackTone)yuiWorkoutTone(fallbackTone);});
-  }catch(e){if(fallbackTone)yuiWorkoutTone(fallbackTone);}
-}
-function yuiPrepareVoice(){
-  try{Object.keys(YUI_AUDIO).forEach(k=>{if(!yuiVoiceCache[k]){const a=new Audio(YUI_AUDIO[k]);a.preload="auto";yuiVoiceCache[k]=a;}});}
-  catch(e){}
-}
-function yuiCountdownCue(){
-  if(!workoutState.running || workoutState.left<=0)return;
-  workoutState.yuiVoiceCues=workoutState.yuiVoiceCues||{};
-  const l=workoutState.left;
-  if(l===10&&!workoutState.yuiVoiceCues.c10){workoutState.yuiVoiceCues.c10=true;yuiPlayVoice("ato10","exercise");}
-  if(l===5&&!workoutState.yuiVoiceCues.c5){workoutState.yuiVoiceCues.c5=true;yuiPlayVoice("ato5","exercise");}
-}
-
-
-
-/* v1.10.2: iOS/PWA voice playback */
+/* v1.10.6: Yui workout voice guidance */
+/* v1.10.5: iOS/PWA voice playback - user-gesture safe */
 const yuiVoice595Src={
   start:"assets/audio/yui/hajimeruyo.mp3",
   ato10:"assets/audio/yui/ato_10byo.mp3",
-  ato5:"assets/audio/yui/ato_5byo.mp3",
   next:"assets/audio/yui/tsugiiko.mp3",
+  rest:"assets/audio/yui/kyukei.mp3",
   complete:"assets/audio/yui/training_kanryo.mp3",
   otsukare:"assets/audio/yui/otsukare.mp3"
 };
@@ -993,6 +960,7 @@ function yuiGetAudioContext595(){
   }
 }
 
+/* Called directly from a user gesture. Do not await before this resume(). */
 function yuiUnlockVoice595(){
   const ctx=yuiGetAudioContext595();
   if(!ctx)return Promise.resolve(null);
@@ -1008,8 +976,10 @@ function yuiUnlockVoice595(){
 async function yuiLoadVoice595(key){
   if(yuiVoiceBuffers595[key])return yuiVoiceBuffers595[key];
   if(yuiVoiceLoad595[key])return yuiVoiceLoad595[key];
+
   const ctx=yuiGetAudioContext595();
   if(!ctx)return null;
+
   const src=yuiVoice595Src[key];
   if(!src)return null;
 
@@ -1027,43 +997,47 @@ async function yuiLoadVoice595(key){
       throw e;
     }
   })();
+
   return yuiVoiceLoad595[key];
 }
 
+/* Preload after the user gesture; playback itself is not blocked by this fetch. */
 function yuiPrepareVoice595(){
   Object.keys(yuiVoice595Src).forEach(key=>{
     yuiLoadVoice595(key).catch(()=>{});
   });
 }
 
-function yuiPlayVoice595(key){
+function yuiPlayVoice595(key,onEnded){
   const ctx=yuiGetAudioContext595();
   if(!ctx)return;
-
   const play=buffer=>{
     if(!buffer)return;
     try{
-      const source=ctx.createBufferSource();
-      source.buffer=buffer;
-      source.connect(ctx.destination);
-      source.start(0);
-    }catch(e){
-      console.error("Yui voice playback failed:",e);
-    }
+      const startSource=()=>{
+        if(ctx.state!=="running"){
+          ctx.resume().then(startSource).catch(e=>console.warn("Yui voice context resume failed:",e));
+          return;
+        }
+        const source=ctx.createBufferSource();
+        source.buffer=buffer;
+        source.connect(ctx.destination);
+        if(typeof onEnded==='function')source.onended=onEnded;
+        source.start(0);
+      };
+      startSource();
+    }catch(e){console.warn("Yui voice playback failed:",e);}
   };
+  if(yuiVoiceBuffers595[key]){play(yuiVoiceBuffers595[key]);return;}
+  yuiLoadVoice595(key).then(play).catch(e=>console.warn("Yui voice load failed:",key,e));
+}
 
-  if(yuiVoiceBuffers595[key]){
-    play(yuiVoiceBuffers595[key]);
-    return;
-  }
-
-  yuiLoadVoice595(key).then(play).catch(e=>{
-    console.warn("Yui voice playback load failed:",key,e);
-  });
+function yuiPlayRestVoice595(){
+  yuiPlayVoice595("rest");
 }
 
 function yuiResetVoice595(){
-  workoutState.yuiVoiceCues={c10:false,c5:false,rest5:false};
+  workoutState.yuiVoiceCues={c10:false};
 }
 
 function yuiCue595(){
@@ -1072,19 +1046,11 @@ function yuiCue595(){
   const left=workoutState.left;
 
   if(workoutState.isRest){
-    if(left===5&&!workoutState.yuiVoiceCues.rest5){
-      workoutState.yuiVoiceCues.rest5=true;
-      yuiPlayVoice595("next");
+  }else{
+    if(left===10&&!workoutState.yuiVoiceCues.c10){
+      workoutState.yuiVoiceCues.c10=true;
+      yuiPlayVoice595("ato10");
     }
-    return;
-  }
-  if(left===10&&!workoutState.yuiVoiceCues.c10){
-    workoutState.yuiVoiceCues.c10=true;
-    yuiPlayVoice595("ato10");
-  }
-  if(left===5&&!workoutState.yuiVoiceCues.c5){
-    workoutState.yuiVoiceCues.c5=true;
-    yuiPlayVoice595("ato5");
   }
 }
 
