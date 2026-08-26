@@ -271,7 +271,7 @@ hard:[
 ]};
 let data=loadData(), metric='weight';
 
-function defaultData(){return {version:19.1,workoutHistory:[],settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',recordDate:'',recordDateAuto:true,weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通'},history:[]}}
+function defaultData(){return {version:19.1,workoutHistory:[],settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',recordDate:'',recordDateAuto:true,weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通',trainingDecision:''},history:[]}}
 function loadData(){
   try{
     let raw=localStorage.getItem(K);
@@ -330,7 +330,9 @@ function sync(){
   setTime(+data.today.time||10);
 }
 function read(){
+  const prevTennis=+data.today.tennis||0;
   ['weight','fat','muscle','bone','visceral','basal','age','waist','tennis'].forEach(id=>data.today[id]=document.getElementById(id).value);
+  if(prevTennis!== (+data.today.tennis||0)) data.today.trainingDecision='';
   data.today.intensity=document.getElementById('intensity').value;
   data.today.recordDate=document.getElementById('recordDate').value||suggestedRecordDate(data.today.period);
 }
@@ -478,8 +480,21 @@ function yuiPlanMessage(type,course,names){
   return `<div class="yui-note workout-reason">${yuiIcon(face)}<div><b>ユイからひとこと</b><div class="sub" style="margin-top:3px">${text}</div></div></div>`;
 }
 function plan(){
-  let t=+data.today.tennis||0,time=+data.today.time||10,type=level(),nm={light:'軽め',normal:'普通',hard:'しっかり'}[type];
-  if(t>=15){planMessage.innerHTML=`<div class="banner"><b>🎾 今日はテニスを${t}分しました</b><div class="sub">すでに運動できています。今夜は追加運動を休んでもOKです。</div><div class="actions" style="margin-top:9px"><button class="btn secondary" onclick="restPlan()">今日は休む</button><button class="btn secondary" onclick="fivePlan()">5分だけ</button></div><button class="btn" style="margin-top:8px" onclick="keepPlan()">予定どおり</button></div>`+`<div class="yui-note workout-reason">${yuiIcon('relieved')}<div><b>ユイからひとこと</b><div class="sub" style="margin-top:3px">今日はもう十分動けてるから、無理に追加しなくても大丈夫だよ。</div></div></div>`;planList.innerHTML='';return}
+  let t=+data.today.tennis||0,time=+data.today.time||10,decision=data.today.trainingDecision||'',type=decision==='light'?'light':level(),nm={light:'軽め',normal:'普通',hard:'しっかり'}[type];
+  const startBtn=document.getElementById('startWorkoutBtn');
+  if(t>=30 && !decision){
+    planMessage.innerHTML=`<div class="banner"><b>🎾 今日はテニスを${t}分しました</b><div class="sub">しっかり運動できているので、今日は休養がおすすめだよ。まだ元気なら、軽めのトレーニングもできます。</div><div class="actions" style="margin-top:9px"><button class="btn secondary" onclick="restPlan()">🌙 今日は休む</button><button class="btn secondary" onclick="lightPlan()">💪 軽めにトレーニング</button></div></div>`+`<div class="yui-note workout-reason">${yuiIcon('relieved')}<div><b>ユイからひとこと</b><div class="sub" style="margin-top:3px">今日はもう十分動けてるから、休むのがおすすめ。でも元気なら軽めにいこう。</div></div></div>`;
+    planList.innerHTML='';
+    if(startBtn)startBtn.style.display='none';
+    return;
+  }
+  if(t>=30 && decision==='rest'){
+    planMessage.innerHTML='<div class="banner"><b>🌙 今日は休養</b><div class="sub">テニスで十分動けています。今日はトレーニングを休んで、そのまま記録できます。</div></div>';
+    planList.innerHTML='';
+    if(startBtn)startBtn.style.display='none';
+    return;
+  }
+  if(startBtn)startBtn.style.display='block';
   const items=buildPlanItems(type,time),mainItems=items.filter(x=>!x.cooldown);
   planMessage.innerHTML=`<div class="banner"><b>🎯 ウエスト引き締め　${nm}・${time}分</b><div class="sub">器具なし・静かにできる内容。適正回数と休憩を組み合わせて、時間に合わせて調整します。</div></div>`+yuiPlanMessage(type,time,mainItems.map(x=>x.name));
   planList.innerHTML=items.map(e=>{
@@ -487,8 +502,9 @@ function plan(){
     return `<div class="exercise" onclick='showExerciseDetail(${JSON.stringify(e.name)})'><div class="illus"><img src="${(Object.values(ex).flat().find(x=>x[0]===e.name)||[])[3]||''}" alt="${e.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none">${(Object.values(ex).flat().find(x=>x[0]===e.name)||[])[2]||'🧘'}</span></div><div><b>${e.name}</b><small>${e.cooldown?'最後に軽く整えます':workoutMeta(e.name).area}</small><div class="workout-dose"><span class="workout-mode">${e.cooldown?'ケア':d.mode==='time'?'時間':'回数'}</span> <b>${d.label}</b>${d.mode==='reps'?`<div class="sub">目安 ${d.min}〜${d.max}回・${e.sets||1}セット・丁寧なフォーム優先</div>`:`<div class="sub">${e.sets||1}セット・タイマーで無理のない範囲をキープ</div>`}</div></div><span class="time">${e.cooldown?'25秒':d.mode==='time'?d.value+'秒':d.value+'回'}</span></div>`;
   }).join('');
 }
-function restPlan(){planMessage.innerHTML='<div class="banner"><b>🌙 今日は休養</b><div class="sub">テニスで十分動けています。休むことも大切です。</div></div>';planList.innerHTML=''}
-function fivePlan(){data.today.time=5;save();plan()}function keepPlan(){data.today.tennis=0;save();plan()}
+function restPlan(){data.today.trainingDecision='rest';save();plan()}
+function lightPlan(){data.today.trainingDecision='light';data.today.intensity='軽め';save();plan()}
+function keepPlan(){data.today.trainingDecision='';data.today.tennis=0;save();plan()}
 function updateHome(){homeC.textContent=em.c[data.today.c];homeCT.textContent=labels.c[data.today.c];homeF.textContent=em.f[data.today.f];homeFT.textContent=labels.f[data.today.f];homeP.textContent=em.p[data.today.p];homePT.textContent=labels.p[data.today.p];homeWeight.textContent=data.today.weight?data.today.weight+' kg':'—';homeBMI.textContent=bmi();homeFat.textContent=data.today.fat?data.today.fat+' %':'—';homeMuscle.textContent=data.today.muscle?data.today.muscle+' kg':'—';homeWaist.textContent=data.today.waist?data.today.waist+' cm':'—'}
 function renderHistory(){history.innerHTML=data.history.slice().reverse().slice(0,12).map(x=>`<div class="metric"><span>${x.date} ${x.period||''}</span><b>${x.weight?x.weight+'kg':'測定なし'} ${x.waist?x.waist+'cm':''}</b></div>`).join('')||'<div class="sub">まだ記録がありません。</div>'}
 const chartFields=[
@@ -717,6 +733,7 @@ function buildWorkoutPlan(){
   return expanded;
 }
 function startWorkoutFromPlan(){
+  if(data.today.trainingDecision==='rest'){toast('今日は休養なのでトレーニングは開始しません');return;}
   yuiResetVoice595();
 
   // IMPORTANT: resume AudioContext synchronously from the button gesture.
@@ -824,7 +841,7 @@ function toggleWorkout(){
   startWorkoutTimer595();
 }
 function markWorkoutFinished(){
-  /* v1.10.6: wait for 「トレーニング完了」 to finish before 「おつかれ〜」. */
+  /* v1.10.7: wait for 「トレーニング完了」 to finish before 「おつかれ〜」. */
   yuiPlayVoice595("complete",()=>yuiPlayVoice595("otsukare"));
   clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutState.finished=true;
   updateWorkoutUI();
@@ -934,7 +951,7 @@ function yuiWorkoutTone(kind){
 }
 
 
-/* v1.10.6: Yui workout voice guidance */
+/* v1.10.7: Yui workout voice guidance */
 /* v1.10.5: iOS/PWA voice playback - user-gesture safe */
 const yuiVoice595Src={
   start:"assets/audio/yui/hajimeruyo.mp3",
