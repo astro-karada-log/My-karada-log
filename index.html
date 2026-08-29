@@ -271,7 +271,7 @@ hard:[
 ]};
 let data=loadData(), metric='weight';
 
-function defaultData(){return {version:19.1,workoutHistory:[],settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',recordDate:'',recordDateAuto:true,weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通',trainingDecision:''},history:[]}}
+function defaultData(){return {version:19.2,workoutHistory:[],settings:{height:'',gender:'',birth:'',goalWaist:''},today:{c:1,f:1,p:0,period:'',recordDate:'',recordDateAuto:true,weight:'',fat:'',muscle:'',bone:'',visceral:'',basal:'',age:'',waist:'',time:10,tennis:0,intensity:'普通',trainingDecision:''},history:[]}}
 function loadData(){
   try{
     let raw=localStorage.getItem(K);
@@ -282,7 +282,7 @@ function loadData(){
   }catch(e){}
   return defaultData()
 }
-function save(){data.version=19.1;data.workoutHistory=Array.isArray(data.workoutHistory)?data.workoutHistory:[];localStorage.setItem(K,JSON.stringify(data))}
+function save(){data.version=19.2;data.workoutHistory=Array.isArray(data.workoutHistory)?data.workoutHistory:[];localStorage.setItem(K,JSON.stringify(data))}
 function _goV14(id,btn){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('sel'));if(btn)btn.classList.add('sel');else{let n=document.querySelector('[data-nav="'+id+'"]');if(n)n.classList.add('sel')}document.getElementById('pageTitle').textContent={home:'今日の記録',record:'記録',plan:'今日の提案',charts:'グラフ',analysis:'ユイの分析',settings:'設定'}[id]||'からだログ';if(id==='charts')charts();if(id==='analysis')renderAnalysis();scrollTo(0,0)}
 function go(id){_goV14(id);if(id==='historyData')renderHistoryData();}
 
@@ -432,23 +432,46 @@ function doseFor(name,type,course){
   return {mode:'reps',value:reps,min:lo,max:hi,sec,label:(lo===hi?String(lo):lo+'〜'+hi)+'回',intensity};
 }
 function chooseWorkoutNames(type,course){
-  const pool=(ex[type]||ex.normal).map(e=>e[0]).filter(n=>!['胸郭ストレッチ','膝抱えストレッチ','骨盤まわりストレッチ'].includes(n));
+  const normalPool=(ex.normal||[]).map(e=>e[0]);
+  const lightPool=(ex.light||[]).map(e=>e[0]);
+  // 軽めでも腹囲目的の主力種目を候補に含め、負荷はdoseFor()側で下げる
+  const pool=[...new Set((type==='light'?lightPool.concat(normalPool):((ex[type]||ex.normal).map(e=>e[0]))))]
+    .filter(n=>!['胸郭ストレッチ','膝抱えストレッチ','骨盤まわりストレッチ'].includes(n));
   const ctx=getPlanContext(), counts=recentExerciseCounts(28);
   const selected=[], usedGroups={};
   const targetCount=course===5?2:course===10?3:5;
+  const waistPriority={
+    'デッドバグ':10,
+    'サイドプランク（膝つき）':9,
+    'プランク':8,
+    'デッドバグ・タップ':8,
+    'スロースクワット':7,
+    'ヒップリフト':7,
+    'バードドッグ':6,
+    'バードドッグ（軽め）':6,
+    'ヒップヒンジ':5,
+    'ワイドスクワット':5,
+    'ニー・トゥ・エルボー（静かに）':5,
+    '壁プッシュアップ':2,
+    'キャット＆カウ':1
+  };
   const candidates=pool.map(name=>{
     const m=workoutMeta(name),recent=counts[name]||0;
-    let s=(ctx.score[m.group]||0)-recent*3;
+    let s=(ctx.score[m.group]||0)-recent*3+(waistPriority[name]||0);
     if(selected.length && usedGroups[m.group])s-=7;
     if(selected.length && selected[selected.length-1] && workoutMeta(selected[selected.length-1]).group===m.group)s-=10;
     if(type==='hard'&&m.group==='モビリティ')s-=2;
     if(type==='light'&&m.group==='脚'&&painRisk())s-=20;
     return {name,score:s};
   }).sort((a,b)=>b.score-a.score);
-  candidates.forEach(c=>{if(selected.length>=targetCount)return;const g=workoutMeta(c.name).group;
-    if(selected.length<targetCount && (usedGroups[g]||0)<2){selected.push(c.name);usedGroups[g]=(usedGroups[g]||0)+1;}
+  candidates.forEach(c=>{
+    if(selected.length>=targetCount)return;
+    const g=workoutMeta(c.name).group;
+    if((usedGroups[g]||0)<2){
+      selected.push(c.name);
+      usedGroups[g]=(usedGroups[g]||0)+1;
+    }
   });
-  // 同一候補だけになった場合のフォールバック
   pool.forEach(n=>{if(selected.length<targetCount&&!selected.includes(n))selected.push(n)});
   return selected.slice(0,targetCount);
 }
@@ -755,7 +778,7 @@ function updateWorkoutUI(){
   if(interruptBtn)interruptBtn.style.display=workoutState.finished?'none':'block';
   if(workoutState.finished){
     workoutStartBtn.disabled=true;
-    workoutStartBtn.textContent="✓ 終了";
+    workoutStartBtn.style.display='none';
     workoutCurrent.textContent="🎉 トレーニング完了！";
     workoutNum.textContent="00:00";
     workoutBar.style.width="100%";
@@ -765,6 +788,7 @@ function updateWorkoutUI(){
     return;
   }
   workoutStartBtn.disabled=false;
+  workoutStartBtn.style.display='inline-flex';
   if(!item)return;
   const yui=document.getElementById('workoutYui');
   if(yui)yui.src=`assets/yui/${YUI_FACE_FILES[item.cooldown?'together':workoutState.running?'cheer':'agree']}`;
@@ -841,7 +865,7 @@ function toggleWorkout(){
   startWorkoutTimer595();
 }
 function markWorkoutFinished(){
-  /* v1.10.7: wait for 「トレーニング完了」 to finish before 「おつかれ〜」. */
+  /* v1.10.8: wait for 「トレーニング完了」 to finish before 「おつかれ〜」. */
   yuiPlayVoice595("complete",()=>yuiPlayVoice595("otsukare"));
   clearInterval(workoutState.id);workoutState.id=null;workoutState.running=false;workoutState.finished=true;
   updateWorkoutUI();
@@ -951,7 +975,7 @@ function yuiWorkoutTone(kind){
 }
 
 
-/* v1.10.7: Yui workout voice guidance */
+/* v1.10.8: Yui workout voice guidance */
 /* v1.10.5: iOS/PWA voice playback - user-gesture safe */
 const yuiVoice595Src={
   start:"assets/audio/yui/hajimeruyo.mp3",
